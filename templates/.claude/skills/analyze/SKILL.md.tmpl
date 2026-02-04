@@ -1,0 +1,104 @@
+---
+name: analyze
+description: |
+  Scan codebase for tech debt, test gaps, security issues, and improvements.
+  USE WHEN: Starting a project, periodic health checks, finding improvement areas.
+  DO NOT USE: For specific bug investigation (use explore agent directly).
+argument-hint: "[--create-spec]"
+---
+
+# Analyze Codebase
+
+Run a systematic health analysis to identify improvement opportunities.
+
+**Reference:** [Background execution rules](_shared/background-execution.md)
+
+## Arguments
+
+- No arguments: Run analysis and display report
+- `--create-spec`: After analysis, prompt to create specs for selected findings
+
+---
+
+## Workflow
+
+### Step 1: Launch Code Explorer
+
+```
+Task(code-explorer, run_in_background: true):
+  Analyze codebase for:
+  - Tech debt (TODOs, FIXMEs, duplicate code)
+  - Test coverage gaps
+  - Security concerns
+  - Performance issues
+  - Documentation gaps
+
+  Return prioritized health report under 500 tokens.
+```
+
+WAIT for notification. Do NOT poll.
+
+### Step 2: Present Findings
+
+Display the health report with available actions:
+
+```markdown
+## Codebase Health Report
+
+[code-explorer summary]
+
+---
+
+### Actions
+- Create spec: `/analyze --create-spec`
+- Re-run: `/analyze`
+- Manual spec then: `/orchestrate [name]`
+```
+
+### Step 3: Handle --create-spec
+
+If `$ARGUMENTS` contains `--create-spec`:
+
+1. Use `AskUserQuestion` to let user select finding(s) to address
+2. Launch **scout** for context on selected finding
+3. Launch **spec-architect** to create spec
+4. Report spec location
+
+---
+
+## Example Output
+
+```markdown
+## Codebase Health Report
+
+### Summary
+- **Overall Health**: NEEDS_ATTENTION
+- **Critical**: 1 | **High**: 4 | **Medium**: 8
+
+### Critical/High Findings
+
+#### Security
+- [CRITICAL] `src/api/search.ts:45`: SQL injection risk
+
+#### Test Gaps
+- [HIGH] `src/services/AuthService.ts`: 12% coverage
+
+#### Tech Debt
+- [HIGH] Duplicate validation in 3 controllers
+
+### Recommendations
+1. Fix SQL injection immediately
+2. Add AuthService tests before changes
+```
+
+---
+
+## Configuration
+
+Analysis can be configured in `.CHAOS/analysis/config.yml`:
+
+```yaml
+focus_areas: [tech_debt, test_coverage, security]
+severity_threshold: medium
+ignore_paths: [vendor/, node_modules/]
+```

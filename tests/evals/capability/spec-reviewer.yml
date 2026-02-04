@@ -1,0 +1,155 @@
+# spec-reviewer Capability Evaluation
+# Tests the agent's ability to correctly evaluate spec completeness
+#
+# Grading: Primarily code-based (fast, deterministic)
+# Expected initial pass rate: ~70%
+
+name: spec-reviewer-capability
+description: Evaluate spec-reviewer's ability to identify complete vs incomplete specs
+agent: spec-reviewer
+model: haiku  # spec-reviewer uses Haiku for speed
+
+tasks:
+  # ============================================
+  # POSITIVE TESTS: Should correctly identify
+  # ============================================
+
+  # Complete specs that SHOULD be approved
+  - id: complete-spec-add-button
+    type: positive
+    description: "Well-formed spec with all sections should be APPROVED"
+    input:
+      spec: fixtures/specs/complete/add-button.md
+    expected:
+      status: APPROVED
+      completeness_score_min: 0.8
+    graders:
+      - type: code
+        check: status == "APPROVED"
+      - type: code
+        check: completeness_score >= 0.8
+
+  - id: complete-spec-auth-feature
+    type: positive
+    description: "Complex but complete spec should be APPROVED"
+    input:
+      spec: fixtures/specs/complete/auth-feature.md
+    expected:
+      status: APPROVED
+      completeness_score_min: 0.8
+    graders:
+      - type: code
+        check: status == "APPROVED"
+      - type: code
+        check: completeness_score >= 0.8
+
+  - id: complete-spec-simple-fix
+    type: positive
+    description: "Minimal but complete spec should be APPROVED"
+    input:
+      spec: fixtures/specs/complete/simple-fix.md
+    expected:
+      status: APPROVED
+      completeness_score_min: 0.7
+    graders:
+      - type: code
+        check: status == "APPROVED"
+
+  # Incomplete specs that SHOULD be rejected
+  - id: incomplete-spec-vague
+    type: positive
+    description: "Vague spec with no specifics should be NEEDS_WORK"
+    input:
+      spec: fixtures/specs/incomplete/vague-feature.md
+    expected:
+      status: NEEDS_WORK
+      has_feedback: true
+    graders:
+      - type: code
+        check: status == "NEEDS_WORK"
+      - type: code
+        check: feedback.length > 50
+
+  - id: incomplete-spec-no-acceptance
+    type: positive
+    description: "Spec without acceptance criteria should be NEEDS_WORK"
+    input:
+      spec: fixtures/specs/incomplete/missing-acceptance.md
+    expected:
+      status: NEEDS_WORK
+      mentions_acceptance_criteria: true
+    graders:
+      - type: code
+        check: status == "NEEDS_WORK"
+      - type: code
+        check: feedback.includes("acceptance") || missing_sections.includes("acceptance")
+
+  # ============================================
+  # NEGATIVE TESTS: Should NOT make these errors
+  # ============================================
+
+  # False positive prevention (don't reject valid specs)
+  - id: no-false-positive-simple
+    type: negative
+    description: "Should NOT reject a valid simple spec"
+    input:
+      spec: fixtures/specs/complete/simple-fix.md
+    forbidden:
+      status: NEEDS_WORK
+    graders:
+      - type: code
+        check: status != "NEEDS_WORK"
+
+  - id: no-false-positive-complex
+    type: negative
+    description: "Should NOT reject a valid complex spec"
+    input:
+      spec: fixtures/specs/complete/auth-feature.md
+    forbidden:
+      status: NEEDS_WORK
+    graders:
+      - type: code
+        check: status != "NEEDS_WORK"
+
+  # False negative prevention (don't approve invalid specs)
+  - id: no-false-negative-vague
+    type: negative
+    description: "Should NOT approve a vague spec"
+    input:
+      spec: fixtures/specs/incomplete/vague-feature.md
+    forbidden:
+      status: APPROVED
+    graders:
+      - type: code
+        check: status != "APPROVED"
+
+  - id: no-false-negative-missing-sections
+    type: negative
+    description: "Should NOT approve spec with missing acceptance criteria"
+    input:
+      spec: fixtures/specs/incomplete/missing-acceptance.md
+    forbidden:
+      status: APPROVED
+    graders:
+      - type: code
+        check: status != "APPROVED"
+
+  # Output format validation
+  - id: output-format-valid
+    type: positive
+    description: "Output should contain required summary structure"
+    input:
+      spec: fixtures/specs/complete/add-button.md
+    graders:
+      - type: code
+        check: output.includes("## Summary") || output.includes("### CRITICAL")
+      - type: code
+        check: output.includes("**Status**:")
+
+# Metadata for tracking
+metadata:
+  version: "1.0.0"
+  created: "2026-02-03"
+  positive_tests: 6
+  negative_tests: 4
+  total_tests: 10

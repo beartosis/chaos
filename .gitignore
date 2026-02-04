@@ -1,0 +1,275 @@
+# CHAOS Framework .gitignore
+
+# =============================================================================
+# Test Results & Evaluation Output
+# =============================================================================
+tests/results/
+*.test-output
+*.eval-output
+
+# =============================================================================
+# Installation Artifacts
+# =============================================================================
+# Backups created during installation
+*.backup
+*.bak
+*.orig
+
+# Local framework metadata (created in target projects, not framework itself)
+.CHAOS/
+
+# =============================================================================
+# Operating System Files
+# =============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# =============================================================================
+# IDE and Editor Files
+# =============================================================================
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs (IntelliJ, WebStorm, PyCharm, etc.)
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Vim/Neovim
+*.swp
+*.swo
+*.swn
+*.vim
+Session.vim
+Sessionx.vim
+.netrwhist
+tags
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Atom
+.atom/
+
+# =============================================================================
+# Language/Runtime Specific
+# =============================================================================
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+.pnpm-store/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+
+# Rust
+target/
+Cargo.lock
+
+# Ruby
+*.gem
+*.rbc
+/.config
+/coverage/
+/InstalledFiles
+/pkg/
+/spec/reports/
+/spec/examples.txt
+/test/tmp/
+/test/version_tmp/
+/tmp/
+.byebug_history
+.dat*
+.repl_history
+*.bridgesupport
+build-iPhoneOS/
+build-iPhoneSimulator/
+/.bundle/
+/vendor/bundle
+/lib/bundler/man/
+
+# =============================================================================
+# Package Manager Lock Files (optional - uncomment if you don't want these)
+# =============================================================================
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+# Gemfile.lock
+
+# =============================================================================
+# Environment and Secrets
+# =============================================================================
+.env
+.env.*
+!.env.example
+.envrc
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+credentials/
+*.credentials
+.secrets
+config.local.*
+settings.local.*
+
+# API keys and tokens
+*.token
+.anthropic
+.openai
+
+# =============================================================================
+# Logs and Debugging
+# =============================================================================
+*.log
+logs/
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+debug/
+*.debug
+
+# =============================================================================
+# Build Output
+# =============================================================================
+dist/
+build/
+out/
+output/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+.turbo/
+
+# =============================================================================
+# Temporary Files
+# =============================================================================
+tmp/
+temp/
+*.tmp
+*.temp
+*.pid
+*.seed
+*.pid.lock
+
+# =============================================================================
+# Documentation Build Output
+# =============================================================================
+docs/_build/
+site/
+.docusaurus/
+.vuepress/dist/
+
+# =============================================================================
+# Coverage and Test Reports
+# =============================================================================
+coverage/
+.nyc_output/
+*.lcov
+junit.xml
+test-results/
+test-reports/
+
+# =============================================================================
+# Miscellaneous
+# =============================================================================
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Core dumps
+core
+core.*
+
+# Claude Code specific
+.claude-session/

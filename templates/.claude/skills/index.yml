@@ -1,0 +1,172 @@
+# CHAOS Skills Registry v2.0
+#
+# This file provides centralized discovery of all skills.
+# Read this to understand available skills without loading full definitions.
+#
+# Schema version: 2.0.0
+# Framework version: 0.3.0
+
+metadata:
+  schema_version: "2.0.0"
+  framework_version: "0.3.0"
+  last_updated: "2025-02-03"
+
+# Security Profiles
+# These define what level of system access a skill requires
+security_profiles:
+  read_only:
+    description: Can only read files and run non-destructive commands
+    tools: [Read, Grep, Glob]
+
+  standard:
+    description: Can read and write files within project scope
+    tools: [Read, Write, Edit, Grep, Glob, Bash]
+
+  elevated:
+    description: Can make external requests and run arbitrary commands
+    tools: [Read, Write, Edit, Grep, Glob, Bash, WebFetch, WebSearch]
+
+  interactive:
+    description: Can interact with user during execution
+    tools: [AskUserQuestion]
+
+# Skill Categories
+categories:
+  workflow:
+    description: Skills that coordinate multi-step processes
+    skills: [orchestrate, create-spec, analyze]
+
+  review:
+    description: Skills for validation and quality checks
+    skills: [review-spec]
+
+  reference:
+    description: Background guidance skills (not user-invocable)
+    skills: [coding-standards, testing-guide]
+
+# User-Invocable Skills (can be run with /skill-name)
+user_invocable:
+  orchestrate:
+    version: "1.0.0"
+    description: Run full spec-to-completion workflow
+    long_description: |
+      Coordinates the entire pipeline from spec validation through
+      implementation and review. Manages agent lifecycle and handles
+      failures with automatic retry and escalation.
+    argument: "[spec-name]"
+    triggers: ["deploy feature", "execute spec", "run pipeline"]
+    agents_used: [spec-reviewer, explore, plan, implement, verifier, code-reviewer]
+    security_profile: elevated
+    category: workflow
+    context_requirements:
+      required:
+        - specs/[spec-name]/SPEC.md
+      recommended:
+        - standards/standards.yml
+        - .claude/agents/index.yml
+    estimated_tokens: 50000-200000
+    typical_duration: "10-60 minutes"
+
+  create-spec:
+    version: "1.0.0"
+    description: Interactively create a feature spec through conversation
+    long_description: |
+      Guides user through requirements gathering using SOLID principles.
+      Uses scout agent for codebase context and spec-architect for
+      specification generation. Supports GitHub issue import.
+    argument: "[feature-name] or --from-issue <url>"
+    triggers: ["new feature", "start spec", "define requirements", "from issue"]
+    agents_used: [scout, spec-architect, spec-reviewer]
+    security_profile: elevated
+    category: workflow
+    modes:
+      guided:
+        description: Interactive Q&A to shape spec from goal
+        arguments: "[feature-name]"
+      from-issue:
+        description: Parse GitHub issue into spec
+        arguments: "--from-issue <github-url>"
+    context_requirements:
+      required: []
+      recommended:
+        - standards/standards.yml
+    estimated_tokens: 10000-30000
+    typical_duration: "5-20 minutes"
+
+  review-spec:
+    version: "1.0.0"
+    description: Submit a spec for review
+    long_description: |
+      Validates specification completeness against SOLID principles.
+      Checks for testable requirements, clear scope, and documented
+      decisions. Returns completeness score and actionable feedback.
+    argument: "[spec-name]"
+    triggers: ["check spec", "validate spec"]
+    agents_used: [spec-reviewer]
+    security_profile: read_only
+    category: review
+    context_requirements:
+      required:
+        - specs/[spec-name]/SPEC.md
+      recommended:
+        - specs/[spec-name]/context/
+    estimated_tokens: 5000-15000
+    typical_duration: "2-5 minutes"
+
+  analyze:
+    version: "1.0.0"
+    description: Run codebase health analysis to identify improvement opportunities
+    long_description: |
+      Systematically analyzes codebase for tech debt, test coverage gaps,
+      security issues, and performance problems. Returns prioritized
+      findings and can generate specs for selected issues.
+    argument: "[--create-spec]"
+    triggers: ["check health", "find tech debt", "audit codebase", "security scan"]
+    agents_used: [code-explorer, scout, spec-architect]
+    security_profile: standard
+    category: workflow
+    flags:
+      --create-spec:
+        description: Prompt to create specs for selected findings
+    outputs: "prioritized findings: tech debt, test gaps, security, performance"
+    context_requirements:
+      required: []
+      recommended:
+        - .CHAOS/analysis/config.yml
+    estimated_tokens: 20000-50000
+    typical_duration: "5-15 minutes"
+
+# Background Skills (Claude uses automatically, not user-invocable)
+background:
+  coding-standards:
+    version: "1.0.0"
+    description: References standards/ for coding guidelines
+    long_description: |
+      Provides coding standards and style guidelines for agents.
+      Automatically loaded by implement and code-reviewer agents.
+    user_invocable: false
+    security_profile: read_only
+    category: reference
+    references: [standards/global/*, standards/backend/*, standards/frontend/*]
+
+  testing-guide:
+    version: "1.0.0"
+    description: References standards/ for testing patterns
+    long_description: |
+      Provides testing philosophy and patterns for agents.
+      Automatically loaded by verifier and implement agents.
+    user_invocable: false
+    security_profile: read_only
+    category: reference
+    references: [standards/testing/*]
+
+# Quick Reference
+#
+# Workflow skills:    orchestrate, create-spec, analyze
+# Review skills:      review-spec
+# Reference skills:   coding-standards, testing-guide
+#
+# Security levels:    read_only < standard < elevated
+#
+# Workflow skills are invoked by users and coordinate agents.
+# Reference skills are used by agents for guidance.

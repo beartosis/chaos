@@ -1,0 +1,44 @@
+# CHAOS Project Standards Index
+#
+# This file provides centralized discovery of all project standards.
+# Claude can read this file to know what standards exist without loading them all.
+#
+# Usage in orchestration:
+#   standards: [all]                    # Apply all standards
+#   standards: [global/*, backend/*]    # Apply domain groups
+#   standards: [global/code-style, backend/patterns]  # Specific standards
+#
+# Usage in specs:
+#   Reference: standards/backend/patterns.md
+
+backend:
+  patterns:
+    description: Code patterns, file organization, and architectural decisions
+  error-handling:
+    description: Error class hierarchy, exception patterns, and API error mapping
+  testing:
+    description: Backend test patterns, fixtures, and coverage expectations
+
+frontend:
+  components:
+    description: UI component design principles and patterns
+  state:
+    description: State management patterns and data fetching
+  accessibility:
+    description: Accessibility requirements and ARIA patterns
+
+global:
+  code-style:
+    description: General code style, naming conventions, and formatting
+  commits:
+    description: Git commit message format and conventions
+  documentation:
+    description: When and how to write comments and documentation
+  minimal-changes:
+    description: Keep changes focused, avoid over-engineering
+
+testing:
+  philosophy:
+    description: What to test, coverage expectations, and test organization
+  patterns:
+    description: Test writing patterns, assertions, and fixtures

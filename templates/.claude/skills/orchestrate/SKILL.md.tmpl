@@ -1,0 +1,203 @@
+---
+name: orchestrate
+description: |
+  Execute a validated spec through the full agent pipeline.
+  USE WHEN: You have a complete spec ready for implementation.
+  DO NOT USE: For exploration, planning, or if spec hasn't passed review.
+  REQUIRES: Valid spec at specs/YYYY-MM-DD-[name]/SPEC.md
+argument-hint: "[spec-name]"
+disable-model-invocation: true
+allowed-tools: Read, Grep, Glob, Bash, Task, AskUserQuestion, TodoWrite
+hooks:
+  - event: skill_start
+    command: .claude/scripts/preflight.sh
+---
+
+# Orchestrate: Spec to Completion
+
+Execute the full spec-driven workflow for `$ARGUMENTS`.
+
+**References:**
+- [Detailed patterns and examples](patterns.md)
+- [Background execution rules](_shared/background-execution.md)
+- [File structure conventions](_shared/file-structure.md)
+
+## Quick Discovery
+
+Read indexes for fast context loading:
+
+```bash
+cat .claude/agents/index.yml    # Available agents, models, capabilities
+cat .claude/skills/index.yml    # Available skills and their purposes
+cat standards/standards.yml     # Coding standards by domain
+```
+
+Agents will read relevant standards before their work. If a spec declares specific standards, ensure agents prioritize those.
+
+---
+
+## Overview
+
+You coordinate the entire pipeline:
+1. Validate the spec
+2. Break it into work units (beads issues)
+3. Execute: explore -> plan -> implement -> verify -> review
+4. Handle failures and escalations
+
+**Key constraint**: You run inline and launch subagents. Subagents cannot spawn other subagents.
+
+---
+
+## Phase 1: Spec Review
+
+1. **Locate the spec**:
+   - Dated folder: `specs/YYYY-MM-DD-[name]/SPEC.md`
+   - Legacy: `specs/[name]/SPEC.md` or `specs/[name].md`
+
+2. **Launch spec-reviewer**:
+   ```
+   Task(spec-reviewer): Review $SPEC_PATH for completeness.
+   Return: status, completeness score, questions (if any), ready (yes/no).
+   ```
+
+3. **Handle questions**: Use `AskUserQuestion` to clarify, update spec.
+
+4. **Gate**: Proceed only when `ready: yes`.
+
+---
+
+## Phase 2: Work Breakdown
+
+Analyze the spec and create work units:
+- What needs to be explored/understood?
+- What design decisions are needed?
+- What code changes are required?
+- What verification is needed?
+
+Create beads issues with dependencies. See [patterns.md](patterns.md) for examples.
+
+---
+
+## Phase 3: Execution Pipeline
+
+For each work unit in dependency order:
+
+### 3.1 Start Work
+```bash
+bd update [issue-id] --status=in_progress
+```
+
+### 3.2 Explore Phase
+```
+Task(explore, run_in_background: true):
+  Issue: [issue-id]
+  Spec context: [relevant section]
+  Focus: [what to investigate]
+
+  Return (<500 tokens): Status, Key Files, Patterns Found, Next guidance.
+```
+**WAIT** for notification.
+
+### 3.3 Plan Phase
+```
+Task(plan, run_in_background: true):
+  Issue: [issue-id]
+  Exploration summary: [from explore]
+  Requirements: [from spec]
+
+  Return (<500 tokens): Status, Files to Modify, Approach, Next guidance.
+```
+**WAIT** for notification.
+
+### 3.4 Implement Phase
+```
+Task(implement, run_in_background: true):
+  Issue: [issue-id]
+  Plan summary: [from plan]
+  Acceptance criteria: [from spec]
+
+  Return (<500 tokens): Status, Files Changed, Tests Added, Next.
+```
+**WAIT** for notification.
+
+---
+
+## Phase 4: Verification
+
+### 4.1 Quick Verification
+```
+Task(verifier, run_in_background: true):
+  Issue: [issue-id]
+  Acceptance criteria: [from spec]
+  Files changed: [from implement]
+
+  Return (<500 tokens): Verdict (PASS|FAIL), Criteria Met, Tests status.
+```
+
+- **FAIL**: Re-launch implement with failure summary. Max 3 retries.
+- **PASS**: Proceed to code review.
+
+### 4.2 Code Review
+```
+Task(code-reviewer, run_in_background: true):
+  Issue: [issue-id]
+  Files changed: [from implement]
+
+  Return (<500 tokens): Verdict (APPROVED|CHANGES_REQUESTED), feedback.
+```
+
+- **CHANGES_REQUESTED**: Re-launch implement. Max 3 retries.
+- **APPROVED**: Close work unit.
+
+### 4.3 Close Work Unit
+```bash
+bd close [issue-id] --reason="Completed: [summary]"
+```
+
+---
+
+## Phase 5: Dispute Resolution
+
+On third failure:
+```
+Task(dispute-resolver):
+  Issue: [issue-id]
+  Failure history: [summary of 3 attempts]
+  Last error: [summary]
+
+  Decide: RETRY with guidance, or ESCALATE to human.
+```
+
+If **ESCALATE**: Use `AskUserQuestion` to get human input.
+
+---
+
+## Phase 6: Completion
+
+1. Verify all issues closed: `bd list --status=open` (should be empty)
+2. Sync beads: `bd sync --flush-only`
+
+3. **Report**:
+   ```markdown
+   ## Orchestration Complete: [Spec Title]
+   **Work Units**: [count]
+   **Files Modified**: [list]
+   **Tests Added**: [yes/no]
+   **Human Interventions**: [count]
+
+   Ready for final human review.
+   ```
+
+---
+
+## Critical Rules
+
+1. **ALL** agent launches use `run_in_background: true`
+2. **WAIT** for notification - end your turn, let agent work
+3. **NEVER** poll with `TaskOutput` or read agent output files
+4. **Three strikes** then dispute-resolver
+5. **Close work units immediately** after approval
+6. Update beads status before/after each phase
+7. Sync at end of workflow
+
+See [patterns.md](patterns.md) for detailed examples and anti-patterns.
