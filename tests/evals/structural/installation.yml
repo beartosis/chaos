@@ -1,0 +1,49 @@
+# CHAOS v2 Eval: Installation structure
+# Tests that install.sh produces the correct directory structure
+#
+# Usage: Run install.sh --force in a temp dir, then verify
+
+name: installation-structure
+description: Verify CHAOS installation produces correct v2 structure
+
+checks:
+  directories_exist:
+    - .claude/skills
+    - .claude/scripts
+    - .chaos
+    - .chaos/learnings-archive
+    - .chaos/framework
+    - standards
+
+  directories_absent:
+    - .claude/agents
+    - specs
+
+  files_exist:
+    - .claude/skills/work/SKILL.md
+    - .claude/skills/self-check/SKILL.md
+    - .claude/skills/learn/SKILL.md
+    - .claude/skills/review-feedback/SKILL.md
+    - .claude/skills/coding-standards/SKILL.md
+    - .claude/skills/testing-guide/SKILL.md
+    - .claude/skills/index.yml
+    - .claude/scripts/preflight.sh
+    - .claude/settings.local.json
+    - .claude/SKILLS-CATALOG.md
+    - .chaos/learnings.md
+    - .chaos/framework/version
+    - .chaos/framework/framework_path
+    - .chaos/framework/skill-registry.json
+    - CLAUDE.md
+    - standards/standards.yml
+
+  files_absent:
+    - .claude/agents/index.yml
+    - specs/_example.md
+
+  file_contents:
+    .chaos/framework/version:
+      contains: "CHAOS_VERSION=2.0.0"
+    CLAUDE.md:
+      contains: "Single Developer Framework"
+      not_contains: "subagent"

@@ -16,7 +16,7 @@ tests/results/
 *.orig
 
 # Local framework metadata (created in target projects, not framework itself)
-.CHAOS/
+.chaos/framework/
 
 # =============================================================================
 # Operating System Files

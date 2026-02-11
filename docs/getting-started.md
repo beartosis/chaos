@@ -1,11 +1,12 @@
 # Getting Started with CHAOS
 
-This guide walks you through installing CHAOS (Claude Handling Agentic Orchestration System) and running your first spec-driven workflow.
+This guide walks you through installing CHAOS and working on your first task.
 
 ## Prerequisites
 
 - [Claude Code](https://claude.ai/code) CLI installed
-- [Beads](https://github.com/steveyegge/beads) - the `bd` command
+- [Beads](https://github.com/steveyegge/beads) — the `bd` command
+- [GitHub CLI](https://cli.github.com/) — the `gh` command (recommended)
 - Git
 - Bash 4+
 
@@ -14,7 +15,6 @@ This guide walks you through installing CHAOS (Claude Handling Agentic Orchestra
 Beads is required for CHAOS. Install it first:
 
 ```bash
-# From official source
 go install github.com/steveyegge/beads/cmd/bd@latest
 ```
 
@@ -23,13 +23,22 @@ Verify it's installed:
 bd --version
 ```
 
-## Step 2: Clone the Framework
+## Step 2: Install GitHub CLI
+
+The GitHub CLI is needed for the PR workflow (`/review-feedback`):
+
+```bash
+# See https://cli.github.com/ for your platform
+gh auth login
+```
+
+## Step 3: Clone the Framework
 
 ```bash
 git clone https://github.com/beartosis/chaos.git ~/chaos
 ```
 
-## Step 3: Install into Your Project
+## Step 4: Install into Your Project
 
 Navigate to your project and run the installer:
 
@@ -40,82 +49,68 @@ cd ~/my-project
 
 The installer will:
 1. Verify Beads is installed
-2. Ask for confirmation
-3. Install agent definitions, skills, and configuration
-4. Create the `specs/` directory
-5. Run verification
+2. Check for GitHub CLI
+3. Ask for confirmation
+4. Install skill definitions and configuration
+5. Create the learnings system
+6. Install coding standards
+7. Run verification
 
-## Step 4: Create Your First Spec
+## Step 5: Work on a Task
 
-The recommended way to create specs is through interactive conversation:
-
-```bash
-claude /create-spec
-```
-
-This starts a guided conversation that:
-1. Asks what you want to build
-2. Explores your codebase for relevant patterns
-3. Asks clarifying questions until requirements are clear
-4. Generates a complete spec with context files
-5. Validates the spec automatically
-
-Example flow:
-```
-> /create-spec
-
-What feature would you like to spec out?
-
-> A user greeting feature that welcomes users by name
-
-Let me explore your codebase... [scout finds patterns]
-
-Questions:
-1. How should the greeting be displayed? (modal, banner, inline?)
-2. Where does the name come from? (input, stored, URL param?)
-3. What if no name is available?
-
-> Inline text, from user input, show "Hello, stranger!"
-
-Creating spec...
-✓ Created: specs/2025-01-25-user-greeting/SPEC.md
-✓ Validation passed
-
-Ready to orchestrate: /orchestrate 2025-01-25-user-greeting
-```
-
-## Step 5: Run Orchestration
+Once ORDER assigns a task (as a Beads issue), start working:
 
 ```bash
-claude /orchestrate 2025-01-25-user-greeting
+claude /work <task-id>
 ```
 
-Watch as CHAOS:
-1. Reviews your spec for completeness
-2. Creates beads issues with dependencies
-3. Explores your codebase
-4. Plans the implementation
-5. Writes the code
-6. Verifies against acceptance criteria
-7. Reviews code quality
+This guides you through:
+1. **Reading** the task, learnings, and standards
+2. **Exploring** the codebase for context
+3. **Planning** the approach
+4. **Implementing** code with tests
+5. **Self-checking** before pushing
+6. **Creating** a draft PR
+
+## Step 6: Address Review Feedback
+
+After ORDER and GHA review your PR:
+
+```bash
+claude /review-feedback
+```
+
+This reads PR comments, addresses each one, and pushes fixes.
+
+## Step 7: Capture Learnings
+
+After merging:
+
+```bash
+claude /learn
+```
+
+This captures what you learned for future sessions.
 
 ## What Happens Next
 
-- **If everything passes**: You get a completion report with files modified and tests added.
-- **If something fails**: The agent retries up to 3 times, then escalates to you.
-- **If clarification needed**: You'll be asked questions during spec review.
+- **ORDER reviews** your draft PR (subjective quality gate)
+- **GHA automated review** runs when PR is marked ready
+- **You address comments** with `/review-feedback` (same session)
+- **PR merges** when both reviews pass
+- **Learnings accumulate** in `.chaos/learnings.md`
+- **Patterns get promoted** to `standards/` over time
 
-## Tips for Good Specs
+## Tips
 
-1. **Be specific** - "Handle errors gracefully" is vague; "Log errors and show user-friendly message" is specific.
-
-2. **Make criteria testable** - "Fast" is not testable; "Responds within 200ms" is.
-
-3. **Define boundaries** - The "Out of Scope" section prevents scope creep.
-
-4. **One feature per spec** - Keep specs focused for better orchestration.
+1. **Always read learnings first** — `.chaos/learnings.md` has notes from past sessions
+2. **Follow standards** — Check `standards/` for established patterns
+3. **Minimal changes** — Only change what the task requires
+4. **Write tests alongside code** — Not after
+5. **Update Beads as you work** — `bd update <id> --note "..."`
 
 ## Next Steps
 
 - Read [Architecture](architecture.md) to understand how CHAOS works
-- See [Writing Specs](writing-specs.md) for advanced patterns
+- Read [CHAOS-VISION.md](CHAOS-VISION.md) for the design philosophy
+- Read [Best Practices](best-practices.md) for usage tips

@@ -1,0 +1,68 @@
+#!/bin/bash
+# CHAOS v2 — Detect and run the project's test suite
+#
+# Usage: bash .claude/scripts/run-tests.sh
+#
+# Detects the project's test runner and executes the full test suite.
+# Exits 0 if tests pass, 1 if they fail.
+
+set -euo pipefail
+
+echo "=== CHAOS: Run Tests ==="
+echo ""
+
+# Detect and run the appropriate test runner
+if [[ -f "package.json" ]]; then
+    # Node.js project
+    if grep -q '"test"' package.json 2>/dev/null; then
+        echo "Detected: Node.js (npm test)"
+        npm test
+        exit $?
+    fi
+fi
+
+if [[ -f "Makefile" ]] || [[ -f "makefile" ]]; then
+    if grep -q '^test:' Makefile 2>/dev/null || grep -q '^test:' makefile 2>/dev/null; then
+        echo "Detected: Makefile (make test)"
+        make test
+        exit $?
+    fi
+fi
+
+if [[ -f "Cargo.toml" ]]; then
+    echo "Detected: Rust (cargo test)"
+    cargo test
+    exit $?
+fi
+
+if [[ -f "go.mod" ]]; then
+    echo "Detected: Go (go test ./...)"
+    go test ./...
+    exit $?
+fi
+
+if [[ -f "setup.py" ]] || [[ -f "pyproject.toml" ]] || [[ -f "pytest.ini" ]] || [[ -f "setup.cfg" ]]; then
+    if command -v pytest &>/dev/null; then
+        echo "Detected: Python (pytest)"
+        pytest
+        exit $?
+    elif command -v python3 &>/dev/null; then
+        echo "Detected: Python (python -m pytest)"
+        python3 -m pytest
+        exit $?
+    fi
+fi
+
+if [[ -f "Gemfile" ]]; then
+    if command -v bundle &>/dev/null; then
+        echo "Detected: Ruby (bundle exec rake test)"
+        bundle exec rake test
+        exit $?
+    fi
+fi
+
+echo "WARNING: No test runner detected."
+echo "Checked: package.json, Makefile, Cargo.toml, go.mod, pytest, Gemfile"
+echo ""
+echo "Run tests manually and verify they pass."
+exit 1

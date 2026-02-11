@@ -1,0 +1,44 @@
+diff --git a/src/api/routes/users.ts b/src/api/routes/users.ts
+index 1234567..abcdef0 100644
+--- a/src/api/routes/users.ts
++++ b/src/api/routes/users.ts
+@@ -15,8 +15,22 @@ export const userRoutes = createRouter();
+
+ userRoutes.get('/:id', async (req, res) => {
+   const { id } = req.params;
++  console.log('DEBUG: fetching user', id);
+   const user = await UserService.findById(id);
+-  res.json(user);
++  console.log('DEBUG: user result', JSON.stringify(user));
++
++  if (!user) {
++    console.log('DEBUG: user not found, returning 404');
++    return res.status(404).json({ error: 'User not found' });
++  }
++
++  console.log('DEBUG: returning user data');
++  res.json(user);
+ });
+
++userRoutes.post('/', async (req, res) => {
++  console.log('DEBUG: creating user with body', req.body);
++  const user = await UserService.create(req.body);
++  debugger;
++  res.status(201).json(user);
++});
+diff --git a/tests/api/users.test.ts b/tests/api/users.test.ts
+index 2345678..bcdef01 100644
+--- a/tests/api/users.test.ts
++++ b/tests/api/users.test.ts
+@@ -20,6 +20,16 @@ describe('User Routes', () => {
+     expect(response.body).toHaveProperty('id');
+   });
+
++  it('should create a new user', async () => {
++    const response = await request(app)
++      .post('/users')
++      .send({ name: 'Test User', email: 'test@example.com' });
++    expect(response.status).toBe(201);
++    expect(response.body.name).toBe('Test User');
++  });
+ });

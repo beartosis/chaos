@@ -1,0 +1,133 @@
+---
+name: review-feedback
+description: Address PR review comments from ORDER and GHA automated review
+user-invocable: true
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, TodoWrite
+---
+
+# /review-feedback — Address PR Review Comments
+
+Your PR has received review comments. Read them, address each one, and push fixes.
+
+## Step 1: Read Review Comments
+
+```bash
+# Get PR number for current branch
+PR_NUMBER=$(gh pr view --json number -q '.number')
+
+# Read all review comments
+gh pr view $PR_NUMBER --comments
+
+# Read the review status
+gh pr checks $PR_NUMBER
+```
+
+## Step 2: Categorize Comments
+
+Sort comments into:
+- **Actionable**: Code changes needed (bugs, missing tests, style issues)
+- **Questions**: Reviewer needs clarification (respond with explanation)
+- **Suggestions**: Optional improvements (implement if they improve quality, skip if opinion-only)
+
+Use `TodoWrite` to track each actionable comment.
+
+## Step 3: Address Each Comment
+
+For each actionable comment:
+1. Read the relevant code section
+2. Understand the reviewer's concern
+3. Make the fix
+4. Verify the fix doesn't break anything
+
+For questions:
+1. Respond on the PR with a clear explanation
+
+## Step 4: Run Tests
+
+```bash
+# Run the full test suite after all fixes
+# Ensure nothing is broken
+```
+
+## Step 5: Push Fixes
+
+```bash
+# Stage only the files you modified (never use git add -A)
+git add <file1> <file2> <file3>
+git diff --cached --stat
+
+git commit -m "review: address PR feedback
+
+- <summary of fix 1>
+- <summary of fix 2>"
+
+git push
+```
+
+**Warning**: Never use `git add -A` or `git add .` — they can include sensitive files, build artifacts, or unrelated changes. Always stage files explicitly.
+
+## Step 5.5: Record Non-Blocking Items
+
+If any review comments were non-blocking (suggestions you chose not to implement, questions you answered without code changes, minor style notes acknowledged but not addressed), write them to a TODO file:
+
+```bash
+PR_NUMBER=$(gh pr view --json number -q '.number')
+mkdir -p .chaos/todos
+```
+
+Write to `.chaos/todos/TODO-${PR_NUMBER}.md`:
+
+```markdown
+# TODO: PR #<number> - <PR title>
+
+Non-blocking items from PR review. Address these when convenient.
+
+## Suggestions Not Implemented
+
+- [ ] <file:line> - <description and reason deferred>
+
+## Questions Answered (No Code Change)
+
+- [ ] <description of question and answer given>
+
+## Notes
+
+- Reviewed on: <date>
+- Feedback round: <round number>
+```
+
+**Rules**:
+- Do NOT create the file if there are no non-blocking items
+- Do NOT stage or commit the TODO file — it is a local-only artifact
+- Overwrite if it already exists (regenerate the full list each round)
+
+## Step 6: Verify
+
+```bash
+# Check that PR checks are passing
+gh pr checks $PR_NUMBER
+
+# Leave a comment summarizing what was addressed
+gh pr comment $PR_NUMBER --body "Addressed all review comments:
+- <fix 1>
+- <fix 2>
+
+Ready for re-review."
+```
+
+## If Review Passes
+
+Once the PR is approved:
+
+1. Merge the PR (e.g., `gh pr merge $PR_NUMBER --squash --delete-branch`)
+2. Update your issue tracker to mark the task complete (e.g., `bd update <task-id> --note "PR merged."`)
+3. Close the task in your tracker (e.g., `bd close <task-id>`)
+
+Then run `/learn` to capture what you learned from this task.
+
+## Key Principles
+
+- **Take feedback seriously.** Reviewers catch things you miss.
+- **Don't argue with style comments.** Match what the reviewer (and codebase) wants.
+- **Fix the root cause.** If a reviewer found one instance, check if the same issue exists elsewhere in your PR.
+- **Respond to everything.** Even if you disagree, explain your reasoning.

@@ -1,0 +1,204 @@
+---
+name: pr-monitor
+description: |
+  Monitor PR status and handle GitHub Actions review feedback autonomously.
+  Polls PR every 2 minutes until GHA approves or requests changes.
+  Handles feedback loop without escalating to ORDER or humans.
+  Enforces PR gates before merge.
+disable-model-invocation: true
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, TodoWrite
+---
+
+# PR Monitor: Autonomous PR Feedback Loop
+
+Monitor a PR's GitHub Actions review status and handle feedback autonomously. Poll every 2 minutes, address review comments, and merge when all gates pass.
+
+## Arguments
+
+PR number (optional): `$ARGUMENTS` — if not provided, auto-detect from current branch.
+
+## Workflow
+
+### Step 1: Get PR Number
+
+```bash
+if [ -n "$ARGUMENTS" ]; then
+  PR_NUM="$ARGUMENTS"
+else
+  # Auto-detect from current branch
+  BRANCH=$(git branch --show-current)
+  PR_NUM=$(gh pr list --head "$BRANCH" --json number -q '.[0].number')
+fi
+
+if [ -z "$PR_NUM" ]; then
+  echo "ERROR: No PR found. Create a PR first."
+  exit 1
+fi
+
+echo "Monitoring PR #$PR_NUM"
+```
+
+### Step 2: Auto-Generate Checklist
+
+Generate a PR checklist from the Beads Issue Contract:
+
+```bash
+# Read task details from the PR body or linked issue
+PR_BODY=$(gh pr view "$PR_NUM" --json body -q '.body')
+
+# Extract acceptance criteria and create checklist
+# Add standard checklist items:
+```
+
+Standard checklist:
+- [ ] All acceptance criteria implemented
+- [ ] Tests added/updated for each acceptance criterion
+- [ ] No out-of-scope changes
+- [ ] Matches required interfaces from spec
+- [ ] Follows project standards
+
+### Step 3: Polling Loop
+
+```bash
+ITERATION=0
+MAX_ITERATIONS=10  # Configurable via .chaos/framework/order/config.yml
+
+while true; do
+  ITERATION=$((ITERATION + 1))
+
+  # Check PR status
+  PR_STATUS=$(gh pr view $PR_NUM --json reviews,statusCheckRollup \
+    --jq '{
+      reviews: [.reviews[] | {state: .state, author: .author.login}],
+      checks: [.statusCheckRollup[] | {name: .name, status: .status, conclusion: .conclusion}]
+    }')
+
+  echo "Poll $ITERATION: Checking PR #$PR_NUM status..."
+
+  # Parse check results
+  ALL_CHECKS_PASSED=$(echo "$PR_STATUS" | jq '[.checks[] | select(.conclusion == "SUCCESS")] | length == ([.checks[]] | length)')
+  CHECKS_FAILED=$(echo "$PR_STATUS" | jq '[.checks[] | select(.conclusion == "FAILURE")] | length > 0')
+  CHANGES_REQUESTED=$(echo "$PR_STATUS" | jq '[.reviews[] | select(.state == "CHANGES_REQUESTED")] | length > 0')
+  APPROVED=$(echo "$PR_STATUS" | jq '[.reviews[] | select(.state == "APPROVED")] | length > 0')
+
+  if [[ "$ALL_CHECKS_PASSED" == "true" && "$APPROVED" == "true" ]]; then
+    echo "PR #$PR_NUM: All checks passed and approved"
+    break
+  fi
+
+  if [[ "$CHECKS_FAILED" == "true" || "$CHANGES_REQUESTED" == "true" ]]; then
+    echo "PR #$PR_NUM: Feedback received, handling..."
+    break  # Exit loop to handle feedback
+  fi
+
+  echo "PR #$PR_NUM: Waiting... (poll $ITERATION)"
+  sleep 120  # Wait 2 minutes
+done
+```
+
+### Step 4: Handle Feedback
+
+If GHA requests changes:
+
+1. **Read feedback**:
+   ```bash
+   # Get review comments
+   gh api repos/{owner}/{repo}/pulls/$PR_NUM/comments \
+     --jq '.[] | {path: .path, line: .diff_hunk, body: .body}'
+
+   # Get review body
+   gh pr view $PR_NUM --json reviews \
+     --jq '.reviews[] | select(.state == "CHANGES_REQUESTED") | .body'
+   ```
+
+2. **Categorize feedback**:
+   - Actionable fixes (code changes needed)
+   - Questions (need clarification — resolve inline)
+   - Suggestions (nice-to-have, apply if within scope)
+
+3. **For each actionable item**:
+   - Read the relevant file
+   - Make the code change
+   - Run tests to verify
+   - Stage and commit
+
+4. **Push and respond**:
+   ```bash
+   git add <changed-files>
+   git commit -m "fix: address review feedback
+
+   - <list of changes made>"
+   git push
+
+   # Reply to PR comments
+   gh pr comment $PR_NUM --body "Addressed review feedback:
+   - <list of changes>"
+   ```
+
+5. **Resume polling** (go back to Step 3)
+
+### Step 5: Check Max Iterations
+
+```bash
+if [ "$ITERATION" -ge "$MAX_ITERATIONS" ]; then
+  echo "ERROR: PR feedback loop exceeded max iterations ($MAX_ITERATIONS)"
+  bd update "$TASK_ID" --note "PR feedback loop exceeded max iterations"
+  exit 1
+fi
+```
+
+### Step 6: Verify Merge Gates
+
+Before merging, all gates must pass:
+
+| Gate | Check |
+|------|-------|
+| **GHA Approved** | Claude GHA has approved the PR |
+| **Checklist Complete** | All auto-generated checklist items are checked |
+| **No Unresolved Comments** | No open review comments remain |
+| **Tests Green** | All CI checks pass |
+
+```bash
+# Verify all gates
+GHA_APPROVED=$(gh pr view $PR_NUM --json reviews \
+  --jq '[.reviews[] | select(.state == "APPROVED")] | length > 0')
+CHECKS_GREEN=$(gh pr view $PR_NUM --json statusCheckRollup \
+  --jq '[.statusCheckRollup[] | select(.conclusion != "SUCCESS")] | length == 0')
+
+if [[ "$GHA_APPROVED" != "true" ]]; then
+  echo "GATE FAIL: GHA not approved"
+  exit 1
+fi
+
+if [[ "$CHECKS_GREEN" != "true" ]]; then
+  echo "GATE FAIL: CI checks not green"
+  exit 1
+fi
+```
+
+If any gate is ambiguous, CHAOS must revise — not escalate.
+
+### Step 7: Merge
+
+```bash
+gh pr merge $PR_NUM --squash --delete-branch
+echo "PR #$PR_NUM merged successfully"
+```
+
+---
+
+## Configuration
+
+Settings from `.chaos/framework/order/config.yml`:
+- `polling.pr_monitor_interval_seconds`: Poll interval (default 120)
+- `polling.escalation_max_iterations`: Max feedback cycles (default 10)
+
+## CRITICAL Rules
+
+1. **Poll every 2 minutes** — Configurable but don't overwhelm API
+2. **Max feedback iterations** — Default 10 before failing
+3. **Never merge without all gates** — All 4 merge gates must pass
+4. **Run tests after feedback** — Verify changes before pushing
+5. **Log all feedback to PR** — Audit trail in PR comments
+6. **Stay within acceptance criteria** — Don't add scope when fixing feedback
+7. **No escalation** — Handle feedback autonomously, fail if unable

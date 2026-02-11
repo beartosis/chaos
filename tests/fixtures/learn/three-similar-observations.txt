@@ -1,0 +1,35 @@
+# Project Learnings
+
+Observations captured by CHAOS sessions. Patterns appearing 3+ times get promoted to `standards/`.
+
+---
+
+## 2026-01-15 — setup-auth
+
+- **Observation**: The codebase uses a centralized error hierarchy in `src/utils/errors.ts`
+- **Context**: Tried creating a new AuthError class directly. Reviewer pointed to existing hierarchy.
+- **Recommendation**: Always extend the base AppError class from src/utils/errors.ts for new error types
+
+## 2026-01-18 — add-payment
+
+- **Observation**: Payment service errors needed to follow the existing error hierarchy
+- **Context**: Created PaymentError extending AppError. Fit perfectly with existing error handler.
+- **Recommendation**: Always extend the base AppError class from src/utils/errors.ts for new error types
+
+## 2026-01-22 — notification-service
+
+- **Observation**: Notification failures needed structured error handling
+- **Context**: The middleware in src/middleware/errorHandler.ts only catches AppError subclasses
+- **Recommendation**: Always extend the base AppError class from src/utils/errors.ts for new error types
+
+## 2026-01-25 — api-validation
+
+- **Observation**: Input validation uses the shared InputValidator in src/utils/
+- **Context**: Each domain has specific validation but they all use the same base class
+- **Recommendation**: Check src/utils/ for existing utility classes before creating new ones
+
+## 2026-01-28 — user-profile
+
+- **Observation**: Profile update needed validation and used InputValidator
+- **Context**: Extending InputValidator was straightforward and consistent with existing code
+- **Recommendation**: Check src/utils/ for existing utility classes before creating new ones

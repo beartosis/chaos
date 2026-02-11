@@ -6,7 +6,6 @@
 #   skill-discovery.sh list --invocable        # List user-invocable skills only
 #   skill-discovery.sh info <skill-name>       # Show skill details
 #   skill-discovery.sh find <trigger-phrase>   # Find skill by trigger
-#   skill-discovery.sh agents <skill-name>     # List agents used by skill
 #   skill-discovery.sh validate                # Validate registry integrity
 
 set -euo pipefail
@@ -15,13 +14,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CHAOS_ROOT="${CHAOS_ROOT:-$(dirname "$SCRIPT_DIR")}"
 
-# Try to find project root (where .CHAOS exists)
-if [[ -f ".CHAOS/skill-registry.json" ]]; then
-    REGISTRY_PATH=".CHAOS/skill-registry.json"
-elif [[ -n "${PROJECT_ROOT:-}" && -f "$PROJECT_ROOT/.CHAOS/skill-registry.json" ]]; then
-    REGISTRY_PATH="$PROJECT_ROOT/.CHAOS/skill-registry.json"
+# Try to find project root (where .chaos/framework exists)
+if [[ -f ".chaos/framework/skill-registry.json" ]]; then
+    REGISTRY_PATH=".chaos/framework/skill-registry.json"
+elif [[ -n "${PROJECT_ROOT:-}" && -f "$PROJECT_ROOT/.chaos/framework/skill-registry.json" ]]; then
+    REGISTRY_PATH="$PROJECT_ROOT/.chaos/framework/skill-registry.json"
 else
-    REGISTRY_PATH="$CHAOS_ROOT/templates/.CHAOS/skill-registry.json"
+    REGISTRY_PATH="$CHAOS_ROOT/templates/.chaos/framework/skill-registry.json"
 fi
 
 # --- Colors ---
@@ -80,8 +79,11 @@ cmd_list() {
         echo -e "${CYAN}Workflow Skills:${NC}"
         jq -r '.skills | to_entries[] | select(.value.category == "workflow") | "  /\(.key) - \(.value.version)"' "$REGISTRY_PATH"
         echo ""
-        echo -e "${CYAN}Review Skills:${NC}"
-        jq -r '.skills | to_entries[] | select(.value.category == "review") | "  /\(.key) - \(.value.version)"' "$REGISTRY_PATH"
+        echo -e "${CYAN}Quality Skills:${NC}"
+        jq -r '.skills | to_entries[] | select(.value.category == "quality") | "  /\(.key) - \(.value.version)"' "$REGISTRY_PATH"
+        echo ""
+        echo -e "${CYAN}Learning Skills:${NC}"
+        jq -r '.skills | to_entries[] | select(.value.category == "learning") | "  /\(.key) - \(.value.version)"' "$REGISTRY_PATH"
         echo ""
         echo -e "${CYAN}Reference Skills (background):${NC}"
         jq -r '.skills | to_entries[] | select(.value.category == "reference") | "  \(.key) - \(.value.version)"' "$REGISTRY_PATH"
@@ -123,23 +125,8 @@ cmd_info() {
     echo "  Optional: $(echo "$skill_data" | jq -r '.arguments.optional // [] | if length == 0 then "none" else join(", ") end')"
     echo ""
 
-    echo -e "${CYAN}Agents Used:${NC}"
-    echo "$skill_data" | jq -r '.agents[]? // empty' | sed 's/^/  - /'
-    [[ $(echo "$skill_data" | jq '.agents | length') -eq 0 ]] && echo "  none"
-    echo ""
-
     echo -e "${CYAN}Triggers:${NC}"
     echo "$skill_data" | jq -r '.triggers[]? // empty' | sed 's/^/  - /'
-    echo ""
-
-    echo -e "${CYAN}Estimated Usage:${NC}"
-    local min_tokens max_tokens min_dur max_dur
-    min_tokens=$(echo "$skill_data" | jq -r '.metrics.estimated_tokens.min // "N/A"')
-    max_tokens=$(echo "$skill_data" | jq -r '.metrics.estimated_tokens.max // "N/A"')
-    min_dur=$(echo "$skill_data" | jq -r '.metrics.typical_duration_minutes.min // "N/A"')
-    max_dur=$(echo "$skill_data" | jq -r '.metrics.typical_duration_minutes.max // "N/A"')
-    echo "  Tokens: $min_tokens - $max_tokens"
-    echo "  Duration: $min_dur - $max_dur minutes"
     echo ""
 
     echo -e "${CYAN}Path:${NC} $(echo "$skill_data" | jq -r '.path // "N/A"')"
@@ -176,28 +163,6 @@ cmd_find() {
     fi
 }
 
-cmd_agents() {
-    local skill_name="$1"
-
-    check_jq
-    check_registry
-
-    skill_name="${skill_name#/}"
-
-    local agents
-    agents=$(jq -r ".skills[\"$skill_name\"].agents // []" "$REGISTRY_PATH")
-
-    if [[ "$agents" == "[]" ]]; then
-        print_warning "No agents found for skill: $skill_name"
-        exit 0
-    fi
-
-    print_header "Agents used by /$skill_name"
-    echo ""
-
-    echo "$agents" | jq -r '.[]' | sed 's/^/  - /'
-}
-
 cmd_validate() {
     check_jq
     check_registry
@@ -231,6 +196,18 @@ cmd_validate() {
         fi
     done
 
+    # Verify no agents are referenced
+    echo ""
+    echo "Checking for agent references..."
+    local agent_refs
+    agent_refs=$(jq -r '.skills[].agents // [] | length' "$REGISTRY_PATH" | awk '{s+=$1} END {print s}')
+    if [[ "$agent_refs" -eq 0 ]]; then
+        print_success "  No agent references (v2 compliant)"
+    else
+        print_warning "  Found agent references (v1 remnant)"
+        errors=$((errors + 1))
+    fi
+
     echo ""
     if [[ $errors -eq 0 ]]; then
         print_success "Registry is valid!"
@@ -249,15 +226,13 @@ cmd_help() {
     echo "  list [--invocable]      List all skills (or just user-invocable)"
     echo "  info <skill>            Show detailed skill information"
     echo "  find <phrase>           Find skills by trigger phrase"
-    echo "  agents <skill>          List agents used by a skill"
     echo "  validate                Validate registry integrity"
     echo "  help                    Show this help message"
     echo ""
     echo "Examples:"
     echo "  skill-discovery.sh list"
-    echo "  skill-discovery.sh info orchestrate"
-    echo "  skill-discovery.sh find \"tech debt\""
-    echo "  skill-discovery.sh agents create-spec"
+    echo "  skill-discovery.sh info work"
+    echo "  skill-discovery.sh find \"implement\""
 }
 
 # --- Main ---
@@ -280,13 +255,6 @@ main() {
                 exit 1
             fi
             cmd_find "$1"
-            ;;
-        agents)
-            if [[ $# -lt 1 ]]; then
-                print_error "Usage: skill-discovery.sh agents <skill-name>"
-                exit 1
-            fi
-            cmd_agents "$1"
             ;;
         validate) cmd_validate ;;
         help|--help|-h) cmd_help ;;

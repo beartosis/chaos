@@ -1,0 +1,25 @@
+# CHAOS v2 Eval: /learn capability
+# Tests that the learn skill captures observations and identifies patterns
+#
+# Usage: ./tests/harness/runner.sh learn capability
+
+name: learn-capability
+description: Verify /learn captures observations and promotes patterns
+skill: learn
+trials: 3
+pass_threshold: 0.67
+
+tasks:
+  - id: captures-observation
+    type: positive
+    description: Should capture a new observation from task reflection
+    input: fixtures/learn/task-reflection.txt
+    expected_output:
+      mentions: ["observation", "learnings.md"]
+
+  - id: identifies-promotable-pattern
+    type: positive
+    description: Should identify a pattern appearing 3+ times for promotion
+    input: fixtures/learn/three-similar-observations.txt
+    expected_output:
+      mentions: ["promote", "standards"]

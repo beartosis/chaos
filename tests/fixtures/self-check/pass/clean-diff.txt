@@ -1,0 +1,47 @@
+diff --git a/src/utils/validator.ts b/src/utils/validator.ts
+index 1234567..abcdef0 100644
+--- a/src/utils/validator.ts
++++ b/src/utils/validator.ts
+@@ -10,6 +10,24 @@ import { ValidationError } from './errors';
+
+ export class InputValidator {
+   private readonly rules: ValidationRule[];
++
++  /**
++   * Validate email format using RFC 5322 simplified pattern.
++   */
++  validateEmail(input: string): ValidationResult {
++    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
++    if (!emailPattern.test(input)) {
++      return { valid: false, error: new ValidationError('Invalid email format') };
++    }
++    return { valid: true };
++  }
++}
++
+diff --git a/tests/utils/validator.test.ts b/tests/utils/validator.test.ts
+index 2345678..bcdef01 100644
+--- a/tests/utils/validator.test.ts
++++ b/tests/utils/validator.test.ts
+@@ -45,6 +45,30 @@ describe('InputValidator', () => {
++  describe('validateEmail', () => {
++    it('should accept valid email addresses', () => {
++      const validator = new InputValidator();
++      expect(validator.validateEmail('user@example.com')).toEqual({ valid: true });
++      expect(validator.validateEmail('name+tag@domain.org')).toEqual({ valid: true });
++    });
++
++    it('should reject invalid email addresses', () => {
++      const validator = new InputValidator();
++      const result = validator.validateEmail('not-an-email');
++      expect(result.valid).toBe(false);
++      expect(result.error).toBeInstanceOf(ValidationError);
++    });
++
++    it('should reject empty strings', () => {
++      const validator = new InputValidator();
++      const result = validator.validateEmail('');
++      expect(result.valid).toBe(false);
++    });
++  });
+ });

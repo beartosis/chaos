@@ -1,0 +1,51 @@
+diff --git a/src/services/notification.ts b/src/services/notification.ts
+new file mode 100644
+index 0000000..abcdef0
+--- /dev/null
++++ b/src/services/notification.ts
+@@ -0,0 +1,45 @@
++import { User } from '../models/user';
++import { Template } from '../templates';
++
++export interface NotificationOptions {
++  channel: 'email' | 'sms' | 'push';
++  priority: 'low' | 'medium' | 'high';
++}
++
++export class NotificationService {
++  private readonly providers: Map<string, NotificationProvider>;
++
++  constructor() {
++    this.providers = new Map();
++  }
++
++  registerProvider(channel: string, provider: NotificationProvider) {
++    this.providers.set(channel, provider);
++  }
++
++  async notify(user: User, message: string, options: NotificationOptions) {
++    const provider = this.providers.get(options.channel);
++    if (!provider) {
++      throw new Error(`No provider registered for channel: ${options.channel}`);
++    }
++
++    const template = Template.render(message, { user });
++    return provider.send(user, template, options.priority);
++  }
++
++  async notifyBatch(users: User[], message: string, options: NotificationOptions) {
++    const results = await Promise.allSettled(
++      users.map(user => this.notify(user, message, options))
++    );
++
++    const failed = results.filter(r => r.status === 'rejected');
++    if (failed.length > 0) {
++      console.warn(`${failed.length} notifications failed`);
++    }
++
++    return {
++      sent: results.filter(r => r.status === 'fulfilled').length,
++      failed: failed.length,
++    };
++  }
++}

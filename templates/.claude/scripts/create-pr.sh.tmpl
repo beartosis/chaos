@@ -1,0 +1,53 @@
+#!/bin/bash
+# CHAOS v2 — Push branch and create a draft PR
+#
+# Usage: bash .claude/scripts/create-pr.sh <branch-name> "<pr-title>" "<pr-body>"
+#
+# Pushes the current branch to origin and creates a draft PR via gh CLI.
+# Exits 0 if PR created, 1 on failure.
+
+set -euo pipefail
+
+BRANCH="${1:-}"
+PR_TITLE="${2:-}"
+PR_BODY="${3:-}"
+
+if [[ -z "$BRANCH" ]] || [[ -z "$PR_TITLE" ]]; then
+    echo "Usage: bash .claude/scripts/create-pr.sh <branch-name> \"<pr-title>\" \"<pr-body>\""
+    exit 1
+fi
+
+echo "=== CHAOS: Create PR ==="
+echo ""
+
+# Check gh is available
+if ! command -v gh &>/dev/null; then
+    echo "FAIL: GitHub CLI (gh) not found."
+    echo "Install: https://cli.github.com/"
+    exit 1
+fi
+
+# Check gh is authenticated
+if ! gh auth status &>/dev/null 2>&1; then
+    echo "FAIL: GitHub CLI not authenticated."
+    echo "Run: gh auth login"
+    exit 1
+fi
+
+# Push branch
+echo "Pushing branch: $BRANCH"
+git push -u origin "$BRANCH"
+echo ""
+
+# Create draft PR
+echo "Creating draft PR..."
+PR_URL=$(gh pr create \
+    --draft \
+    --title "$PR_TITLE" \
+    --body "$PR_BODY" \
+    2>&1)
+
+echo ""
+echo "================================"
+echo "Draft PR created: $PR_URL"
+exit 0

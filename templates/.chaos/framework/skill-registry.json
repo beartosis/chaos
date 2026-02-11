@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "metadata": {
+    "schema_version": "2.0.0",
+    "framework_version": "2.0.0",
+    "generated_at": "${INSTALL_DATE}",
+    "chaos_root": "${CHAOS_ROOT}"
+  },
+  "skills": {
+    "work": {
+      "name": "work",
+      "version": "2.0.0",
+      "path": ".claude/skills/work/SKILL.md",
+      "invocable": true,
+      "command": "/work",
+      "arguments": {
+        "required": ["task-id"],
+        "optional": []
+      },
+      "agents": [],
+      "security": {
+        "profile": "elevated",
+        "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "TodoWrite", "AskUserQuestion"]
+      },
+      "context": {
+        "required": [".chaos/learnings.md"],
+        "optional": ["standards/standards.yml"]
+      },
+      "triggers": ["start task", "implement feature", "work on", "begin task"],
+      "category": "workflow"
+    },
+    "self-check": {
+      "name": "self-check",
+      "version": "2.0.0",
+      "path": ".claude/skills/self-check/SKILL.md",
+      "invocable": true,
+      "command": "/self-check",
+      "arguments": {
+        "required": [],
+        "optional": []
+      },
+      "agents": [],
+      "security": {
+        "profile": "read_only",
+        "tools": ["Read", "Bash", "Grep", "Glob"]
+      },
+      "context": {
+        "required": [],
+        "optional": []
+      },
+      "triggers": ["check code", "verify changes", "ready to push"],
+      "category": "quality"
+    },
+    "learn": {
+      "name": "learn",
+      "version": "2.0.0",
+      "path": ".claude/skills/learn/SKILL.md",
+      "invocable": true,
+      "command": "/learn",
+      "arguments": {
+        "required": [],
+        "optional": []
+      },
+      "agents": [],
+      "security": {
+        "profile": "standard",
+        "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
+      },
+      "context": {
+        "required": [".chaos/learnings.md"],
+        "optional": ["standards/standards.yml"]
+      },
+      "triggers": ["capture learnings", "reflect", "post-mortem"],
+      "category": "learning"
+    },
+    "review-feedback": {
+      "name": "review-feedback",
+      "version": "2.0.0",
+      "path": ".claude/skills/review-feedback/SKILL.md",
+      "invocable": true,
+      "command": "/review-feedback",
+      "arguments": {
+        "required": [],
+        "optional": []
+      },
+      "agents": [],
+      "security": {
+        "profile": "elevated",
+        "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "TodoWrite"]
+      },
+      "context": {
+        "required": [],
+        "optional": []
+      },
+      "triggers": ["address review", "fix comments", "pr feedback"],
+      "category": "workflow"
+    },
+    "coding-standards": {
+      "name": "coding-standards",
+      "version": "1.0.0",
+      "path": ".claude/skills/coding-standards/SKILL.md",
+      "invocable": false,
+      "agents": [],
+      "security": {
+        "profile": "read_only",
+        "tools": ["Read"]
+      },
+      "references": ["standards/global/*", "standards/backend/*", "standards/frontend/*"],
+      "category": "reference"
+    },
+    "testing-guide": {
+      "name": "testing-guide",
+      "version": "1.0.0",
+      "path": ".claude/skills/testing-guide/SKILL.md",
+      "invocable": false,
+      "agents": [],
+      "security": {
+        "profile": "read_only",
+        "tools": ["Read"]
+      },
+      "references": ["standards/testing/*"],
+      "category": "reference"
+    }
+  },
+  "categories": {
+    "workflow": {
+      "description": "Skills that guide multi-step development processes",
+      "skills": ["work", "review-feedback"]
+    },
+    "quality": {
+      "description": "Skills for verification and quality assurance",
+      "skills": ["self-check"]
+    },
+    "learning": {
+      "description": "Skills for continuous improvement",
+      "skills": ["learn"]
+    },
+    "reference": {
+      "description": "Background guidance skills (not user-invocable)",
+      "skills": ["coding-standards", "testing-guide"]
+    }
+  },
+  "security_profiles": {
+    "read_only": {
+      "level": 1,
+      "description": "Can only read files and run non-destructive commands",
+      "allowed_tools": ["Read", "Grep", "Glob"]
+    },
+    "standard": {
+      "level": 2,
+      "description": "Can read and write files within project scope",
+      "allowed_tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"]
+    },
+    "elevated": {
+      "level": 3,
+      "description": "Development access with scoped Bash commands",
+      "allowed_tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "TodoWrite", "AskUserQuestion"],
+      "bash_restrictions": {
+        "blocked_commands": ["rm -rf /", "sudo", "curl | sh", "wget | sh", "chmod 777"],
+        "scope": "project_directory_only"
+      }
+    }
+  }
+}

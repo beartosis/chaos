@@ -1,0 +1,155 @@
+---
+name: work
+description: Execute a task from start to draft PR — the complete single-developer workflow
+user-invocable: true
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, TodoWrite, AskUserQuestion
+---
+
+# /work — Single Developer Workflow
+
+You are a professional software developer. You have been assigned a task. Your job is to produce production-grade code that a Senior Engineer would approve on first review.
+
+## Arguments
+
+Task identifier: `$ARGUMENTS`
+
+## Step 1: Understand the Task
+
+1. **Read the full task details** from your issue tracker (e.g., `bd show $ARGUMENTS`), including acceptance criteria and constraints
+2. **Read your accumulated learnings**: `cat .chaos/learnings.md`
+3. **Read project standards**: `cat standards/standards.yml`
+
+Read the task thoroughly. Understand the acceptance criteria, constraints, and scope. If anything is ambiguous, use `AskUserQuestion` to clarify with the user before writing any code.
+
+## Step 2: Explore and Plan
+
+Before writing code, explore the codebase to understand:
+- Existing patterns and conventions
+- Files that will need modification
+- Related tests and how they're structured
+- Dependencies and potential side effects
+
+Use `Grep`, `Glob`, and `Read` to build a mental model. Then create a plan using `TodoWrite`:
+- Break the task into concrete implementation steps
+- Order by dependency (what must be done first)
+- Each step should be a single, reviewable change
+
+## Step 3: Implement
+
+Work through your plan step by step:
+- Follow existing patterns in the codebase
+- Write tests alongside implementation (not after)
+- Keep changes minimal and focused — only what the task requires
+- Use the coding standards from `standards/` as your guide
+- Update your issue tracker as you make progress (e.g., `bd update $ARGUMENTS --note "Completed X"`)
+
+### Quality Bar
+
+Your code must meet this bar before moving on:
+- **No shortcuts** — handle errors properly, no TODOs left behind
+- **Tests pass** — run the full test suite, not just your new tests
+- **Patterns match** — your code should look like it was written by the same developer who wrote the rest of the codebase
+- **Minimal diff** — don't refactor surrounding code unless the task requires it
+
+## Step 4: Self-Check
+
+Before pushing, run `/self-check` to verify quality. Address any issues it raises.
+
+## Error Recovery
+
+If you hit problems during implementation, follow these guidelines:
+
+### Tests Fail
+1. Read the test output carefully
+2. If the failure is in code you wrote, fix it and re-run
+3. If the failure is pre-existing (not caused by your changes), document it in the PR description and continue
+
+### Implementation Blocked
+1. Document exactly what is blocking you and why
+<!-- ORDER-START -->
+2. Report the blocker to ORDER via Beads: `bd update $ARGUMENTS --note "BLOCKED: <reason>"`
+<!-- ORDER-END -->
+<!-- STANDALONE-START -->
+2. Ask the user for guidance using `AskUserQuestion`
+<!-- STANDALONE-END -->
+
+### Dependency Issues
+1. Do not install unauthorized dependencies
+2. If you need a new dependency, document it as a blocker
+3. Check if the project already has a similar dependency you can use
+
+### Branch Conflicts
+1. Fetch latest: `git fetch origin main`
+2. Rebase your branch: `git rebase origin/main`
+3. Resolve conflicts by keeping your changes where they don't contradict main
+4. Re-run tests after resolving
+
+## Step 5: Create Draft PR
+
+### Branch and PR Rules (MANDATORY)
+
+- **NEVER checkout or push to another task's branch** — each task owns its own branch
+- **NEVER update an existing PR** — each task creates exactly one new PR
+- **Branch naming**: always `task/{task-id}` — simple, predictable, no beads ID prefix
+- The ORDER loop may pre-create your branch. Check before creating.
+
+```bash
+# Check if already on the task branch (pre-created by ORDER loop)
+# If on main, create the branch. If already on task branch, skip.
+CURRENT=$(git branch --show-current)
+if [[ "$CURRENT" == "main" ]]; then
+    git pull origin main
+    git checkout -b task/$ARGUMENTS
+fi
+
+# Stage only the files you modified (never use git add -A)
+git add <file1> <file2> <file3>
+git diff --cached --stat
+
+git commit -m "feat: <description based on task>
+
+Task: $ARGUMENTS"
+
+# Push and create draft PR
+git push -u origin task/$ARGUMENTS
+gh pr create --draft --title "<task title>" --body "## Task
+<link to Beads issue>
+
+## Changes
+<bullet list of what changed and why>
+
+## Testing
+<how to verify the changes work>"
+```
+
+**Warning**: Never use `git add -A` or `git add .` — they can include sensitive files, build artifacts, or unrelated changes. Always stage files explicitly.
+
+## Step 6: Update Task Status
+
+Update your issue tracker to record the draft PR (e.g., `bd update $ARGUMENTS --note "Draft PR created. Awaiting review."`).
+
+## What Happens Next
+
+<!-- ORDER-START -->
+**When running under ORDER (autonomous mode):**
+1. Run `/pr-monitor` to autonomously monitor the PR
+2. `/pr-monitor` polls GHA every 2 minutes and addresses feedback
+3. When all merge gates pass, `/pr-monitor` merges the PR
+4. Run `/learn` to capture observations
+<!-- ORDER-END -->
+
+<!-- STANDALONE-START -->
+**When running standalone (interactive mode):**
+1. Push your draft PR for review (human or CI)
+2. Address any review comments with `/review-feedback`
+3. Once approved, merge the PR
+4. Run `/learn` to capture observations for future sessions
+<!-- STANDALONE-END -->
+
+## Key Principles
+
+- **You are one developer, one conversation.** No subagents, no delegation.
+- **Read before you write.** Understand existing code before modifying it.
+- **Learnings are your memory.** Check `.chaos/learnings.md` — past sessions left notes for you.
+- **Standards are your guide.** Check `standards/` — proven patterns have been promoted there.
+- **Quality over speed.** A clean first draft saves more time than a fast sloppy one.

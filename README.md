@@ -1,10 +1,8 @@
-# CHAOS
+# CHAOS: Claude Handling Autonomous Orchestration System
 
-**Claude Handling Agentic Orchestration System** · v0.0.1
+v0.0.2
 
-> **Early Release**: This is an initial release (v0.0.1). APIs and workflows may change as we iterate based on feedback.
-
-Spec-driven agentic orchestration for Claude Code. Write specs, let agents handle the rest. CHAOS transforms natural language specifications into working code through a coordinated pipeline of specialized AI agents.
+A skill-driven framework for Claude Code that treats each conversation as a professional software developer. CHAOS provides workflow skills, coding standards, and a self-reinforcing learning system that accumulates wisdom across sessions.
 
 ## Quick Start
 
@@ -12,167 +10,176 @@ Spec-driven agentic orchestration for Claude Code. Write specs, let agents handl
 # 1. Install Beads (required) - https://github.com/steveyegge/beads
 go install github.com/steveyegge/beads/cmd/bd@latest
 
-# 2. Clone the framework
+# 2. Install GitHub CLI (recommended) - https://cli.github.com/
+# Required for PR workflow (/review-feedback)
+
+# 3. Clone the framework
 git clone https://github.com/beartosis/chaos.git ~/chaos
 
-# 3. Install into your project
+# 4. Install into your project
 cd ~/my-project
 ~/chaos/install.sh
 
-# 4. Create and run your first spec
-claude /create-spec
-claude /orchestrate YYYY-MM-DD-my-feature
+# 5. Start working on a task
+claude /work <task-id>
 ```
 
 ## How It Works
 
 ```
-Human → Spec
+    /work <task-id>
          ↓
-    /orchestrate (main skill)
+    Read task + learnings + standards
          ↓
-    Spec Reviewer ←→ Human (questions)
+    Explore → Plan → Implement → Test
          ↓
-    Work Breakdown (beads issues)
+    /self-check (pre-push quality gate)
          ↓
-    Explore → Plan → Implement → Verify → Review
-         ↓ (on failure)
-    Dispute Resolver → Retry or Escalate
+    Push branch → Create draft PR
+         ↓
+    GHA automated review
+         ↓
+    /review-feedback (address comments)
+         ↓
+    Merge → /learn (capture observations)
 ```
 
-## Prerequisites
+## Requirements
 
-- [Claude Code](https://claude.ai/code) CLI
-- [Beads](https://github.com/steveyegge/beads) - issue tracking (`bd` command) - Official repo: [steveyegge/beads](https://github.com/steveyegge/beads)
-- Git
-- Bash 4+
+| Tool | Purpose | Install |
+|------|---------|---------|
+| [Claude Code](https://claude.ai/code) | CLI for Claude | See website |
+| [Beads](https://github.com/steveyegge/beads) | Issue tracking (`bd` command) | `go install github.com/steveyegge/beads/cmd/bd@latest` |
+| [GitHub CLI](https://cli.github.com/) | PR workflow (`gh` command) | See website |
+| [jq](https://jqlang.github.io/jq/) | JSON processor | `brew install jq` / `apt install jq` |
+| Git | Version control | Usually pre-installed |
+| Bash 4+ | Shell | Usually pre-installed |
 
-### Installing Beads
+## Skills
 
-```bash
-# From official source
-go install github.com/steveyegge/beads/cmd/bd@latest
-```
+| Skill | Command | Purpose |
+|-------|---------|---------|
+| **Work** | `/work <task-id>` | Execute task from start to draft PR |
+| **Plan** | `/plan <goal>` | Explore codebase and design an approach |
+| **Self-Check** | `/self-check` | Pre-push quality gate |
+| **Review Feedback** | `/review-feedback` | Address PR review comments |
+| **Learn** | `/learn` | Post-task reflection and pattern promotion |
+
+Plus two background reference skills: `coding-standards` and `testing-guide`.
 
 ## Installation
 
 ```bash
 cd /path/to/your/project
 ~/chaos/install.sh
+
+# For CI/scripts (no prompts)
+~/chaos/install.sh --force
 ```
 
 This creates:
-- `.claude/` - Agent definitions, skills, and scripts
-- `specs/` - Directory for your specifications
-- `.CHAOS/` - Framework configuration
-- `CLAUDE.md` - Project instructions for Claude
+- `.claude/` — Skill definitions, scripts, and configuration
+- `.chaos/` — Learnings system and framework metadata
+- `standards/` — Coding standards (evolves via `/learn`)
+- `CLAUDE.md` — Project instructions for Claude
 
-## Usage
+## The Learning Loop
 
-### Creating Specs
+CHAOS includes a self-reinforcing improvement system:
 
-```bash
-# Interactive guided creation
-claude /create-spec
+1. **During work**: Claude reads `.chaos/learnings.md` for notes from past sessions
+2. **After tasks**: `/learn` captures observations about what worked, what didn't
+3. **Pattern promotion**: When an observation appears 3+ times, it gets promoted to `standards/`
+4. **Future sessions**: New conversations benefit from accumulated project wisdom
 
-# From a GitHub issue
-claude /create-spec --from-issue https://github.com/org/repo/issues/123
+```
+Session 1: "The codebase uses tRPC, not Express"  → learnings.md
+Session 2: "Found tRPC routers in src/server/"     → learnings.md
+Session 3: "API routes are all tRPC procedures"    → PROMOTED to standards/backend/patterns.md
+Session 4+: Reads standards, knows to use tRPC from the start
 ```
 
-This starts an interactive conversation that:
-1. Asks what you want to build
-2. Explores your codebase for patterns
-3. Asks clarifying questions
-4. Generates a complete spec
+## Key Rules
 
-### Analyzing Codebase Health
+CHAOS enforces several rules across all skills:
 
-```bash
-claude /analyze
-```
+- **Read before you write** — always explore existing code before modifying it
+- **Minimal diffs** — only change what the task requires
+- **Tests alongside code** — write tests as you implement, not after
+- **Beads-first** — update Beads issues as you work for persistent state
+- **No attribution** — no Co-Authored-By, Signed-off-by, or other co-author lines in commits
 
-Identifies tech debt, test gaps, security issues, and improvement opportunities. Optionally create specs from findings:
+## Security
 
-```bash
-claude /analyze --create-spec
-```
+Skills operate under tiered security profiles:
 
-### Running Orchestration
+| Profile | Level | Purpose |
+|---------|-------|---------|
+| `read_only` | 1 | Reference skills, verification |
+| `standard` | 2 | Learning and documentation |
+| `elevated` | 3 | Full development workflow |
 
-```bash
-claude /orchestrate YYYY-MM-DD-my-feature
-```
-
-The orchestrator will:
-1. **Review** - Validate spec completeness
-2. **Break down** - Create beads issues with dependencies
-3. **Execute** - Run explore → plan → implement pipeline
-4. **Verify** - Check acceptance criteria
-5. **Review code** - Quality gate before completion
-
-### Handling Failures
-
-- **Automatic retry**: Up to 3 attempts per work unit
-- **Dispute resolution**: On repeated failures, decides retry vs escalate
-- **Human escalation**: Complex issues go back to you
-
-## Agents
-
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| spec-architect | Opus | Transforms intent into well-formed specs |
-| spec-reviewer | Sonnet | Validates spec completeness |
-| code-explorer | Haiku | Codebase health analysis |
-| scout | Haiku | Pattern discovery for spec creation |
-| explore | Haiku | Fast codebase investigation |
-| plan | Sonnet | Designs implementation approach |
-| implement | Opus | Writes code |
-| verifier | Haiku | Checks acceptance criteria |
-| code-reviewer | Sonnet | Quality gate |
-| dispute-resolver | Sonnet | Handles failures |
-| beads-helper | Haiku | Issue tracking commands |
-| tooling-setup | Haiku | Diagnoses tooling issues |
+The elevated tier scopes Bash access to the project directory and blocks dangerous commands (`rm -rf /`, `sudo`, `curl | sh`, etc.).
 
 ## Project Structure
 
 ```
-CHAOS/                       # Framework (you clone this)
-├── install.sh              # Main installer
-├── lib/                    # Framework utilities
-│   ├── beads_check.sh      # Verifies Beads is installed
-│   ├── template_engine.sh  # Processes templates
-│   └── verify.sh           # Post-install verification
-├── templates/              # Files installed into projects
+CHAOS/                          # Framework (you clone this)
+├── install.sh                  # Main installer
+├── uninstall.sh                # Clean uninstaller
+├── lib/                        # Framework utilities
+│   ├── beads_check.sh          # Verifies Beads is installed
+│   ├── template_engine.sh      # Processes templates
+│   ├── verify.sh               # Post-install verification
+│   └── skill-discovery.sh      # Skill query tool
+├── templates/                  # Files installed into projects
 │   ├── .claude/
-│   │   ├── agents/         # Agent definitions
-│   │   ├── skills/         # Skill definitions
-│   │   └── scripts/        # Helper scripts
-│   ├── specs/              # Example spec
-│   └── CLAUDE.md.tmpl      # Project instructions
-└── docs/                   # Documentation
+│   │   ├── skills/             # Skill definitions
+│   │   └── scripts/            # Helper scripts
+│   ├── .chaos/                 # Learnings system
+│   ├── standards/              # Coding standards
+│   └── CLAUDE.md.tmpl          # Project instructions
+└── docs/                       # Documentation
 ```
 
 ## Philosophy
 
-**Human writes specs** - Clear, testable requirements in natural language.
+**One conversation = one developer.** No subagents, no delegation, no background processes. Claude reads the task, plans the approach, writes the code, and pushes a PR — just like a human developer.
 
-**Agents handle execution** - Review, plan, implement, verify in a coordinated pipeline.
+**Quality over speed.** A clean first draft saves more time than a fast sloppy one. Code should pass review on the first try.
 
-**Minimal context** - Agents return summaries (<500 tokens), detailed work goes to beads issues and git.
+**Learn from experience.** The learnings system means each session makes the next one better. Patterns get discovered, validated, and promoted to standards automatically.
 
-**Beads-first workflow** - All agents read from and write to beads issues, creating a persistent record of work.
+**Beads-first workflow.** All work state lives in Beads issues, creating a persistent record that survives context compaction.
+
+## Uninstallation
+
+```bash
+cd /path/to/your/project
+~/chaos/uninstall.sh
+
+# For CI/scripts (no prompts)
+~/chaos/uninstall.sh --force
+```
+
+Learnings are preserved if they contain significant content.
 
 ## Autonomous Operation
 
-CHAOS is designed with humans in the loop. For fully autonomous operation (batch processing, overnight runs, CI/CD), see [ORDER](https://github.com/beartosis/order).
+CHAOS works with [ORDER](https://github.com/beartosis/order) (Optional Resource During Extended Runtimes) for autonomous multi-step execution. ORDER acts as the Engineering Lead:
+- Decomposes specs into PR-sized tasks with Beads Issue Contracts
+- Executes tasks sequentially, merging each PR before starting the next
+- Manages the full PR lifecycle: rebase, GHA checks, review feedback, merge
+- Hands off between ORDER instances via structured YAML for long-running roadmaps
 
-ORDER is an optional plugin that intercepts CHAOS's human escalation points, enabling autonomous execution with safety limits.
+See [ORDER](https://github.com/beartosis/order) for details.
 
 ## Documentation
 
-- [Vision Document](docs/CHAOS-VISION.md) - Full architecture and design philosophy
-- [Writing Specs](docs/writing-specs.md) - How to write effective specifications
-- [Architecture](docs/architecture.md) - System design and agent coordination
+- [Architecture](docs/architecture.md) — System design and skill workflow
+- [Vision Document](docs/CHAOS-VISION.md) — Design philosophy
+- [Getting Started](docs/getting-started.md) — Installation and first task
+- [Best Practices](docs/best-practices.md) — Usage patterns and tips
 
 ## Contributing
 
@@ -182,4 +189,4 @@ ORDER is an optional plugin that intercepts CHAOS's human escalation points, ena
 
 ## License
 
-MIT License - see LICENSE file.
+MIT — see [LICENSE](LICENSE) file.

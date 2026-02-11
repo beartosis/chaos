@@ -1,6 +1,6 @@
 #!/bin/bash
-# Preflight checks for CHAOS orchestrator
-# Verifies Beads is available (required)
+# Preflight checks for CHAOS v2
+# Verifies Beads, Git, and gh CLI are available
 
 set -euo pipefail
 
@@ -34,6 +34,45 @@ if command -v git &>/dev/null; then
 else
     WARNINGS+=("git not found - recommended for version control")
     echo "WARN: git (not found)"
+fi
+
+# --- GitHub CLI (recommended for PR workflow) ---
+echo ""
+echo "Checking GitHub CLI..."
+if command -v gh &>/dev/null; then
+    GH_VERSION=$(gh --version 2>/dev/null | head -1 || echo "unknown")
+    echo "OK: gh ($GH_VERSION)"
+    # Check if authenticated
+    if gh auth status &>/dev/null 2>&1; then
+        echo "OK: gh authenticated"
+    else
+        WARNINGS+=("gh CLI not authenticated - run 'gh auth login' for PR workflow")
+        echo "WARN: gh not authenticated"
+    fi
+else
+    WARNINGS+=("gh CLI not found - needed for /review-feedback and PR workflow")
+    echo "WARN: gh not found"
+    echo "  Install: https://cli.github.com/"
+fi
+
+# --- Learnings file ---
+echo ""
+echo "Checking learnings..."
+if [[ -f ".chaos/learnings.md" ]]; then
+    echo "OK: .chaos/learnings.md exists"
+else
+    echo "INFO: Creating .chaos/learnings.md"
+    mkdir -p .chaos/learnings-archive
+    cat > .chaos/learnings.md <<'LEARN_EOF'
+# Project Learnings
+
+Observations captured by CHAOS sessions. Patterns appearing 3+ times get promoted to `standards/`.
+
+---
+
+<!-- New learnings are appended below. Use /learn after completing tasks. -->
+LEARN_EOF
+    echo "OK: .chaos/learnings.md created"
 fi
 
 # --- Summary ---

@@ -1,290 +1,174 @@
-# CHAOS Best Practices & Claude Compatibility
+# CHAOS Best Practices
 
-This document analyzes CHAOS's design against Claude Code best practices and provides guidance for optimal usage.
+Guidance for getting the best results from CHAOS v2.
 
-## Architecture Alignment
+## Skill Usage
 
-### Why CHAOS Skills Run Inline (Not `context: fork`)
+### /work — Task Execution
 
-Claude Code's `context: fork` pattern runs skills in isolated subagent contexts. CHAOS intentionally does **not** use this pattern for orchestration skills. Here's why:
+**Read before you write.** The most common mistake is jumping into code changes without understanding existing patterns. `/work` explicitly guides you to explore first.
 
-**Critical Limitation**: Subagents cannot spawn other subagents.
+**Plan with TodoWrite.** Break the task into small steps. This keeps you focused and gives visibility into progress.
 
-Since `/orchestrate` and `/create-spec` coordinate multiple agents (scout, spec-reviewer, explore, plan, implement, verifier, code-reviewer), they must run inline in the main conversation where subagent spawning is permitted.
+**Keep diffs minimal.** Only change what the task requires. Don't refactor surrounding code, add unrelated improvements, or "clean up" things that aren't broken.
 
-| Skill | Spawns Agents? | Can Use `context: fork`? |
-|-------|---------------|-------------------------|
-| `/orchestrate` | Yes (6+ agents) | No |
-| `/create-spec` | Yes (scout, spec-reviewer) | No |
-| `/review-spec` | Yes (spec-reviewer) | No |
-| `/coding-standards` | No | Could, but unnecessary |
+### /self-check — Quality Gate
 
-**When `context: fork` IS appropriate**:
-- Read-only research skills that don't coordinate agents
-- Single-task isolated execution
-- Skills that benefit from clean context isolation
+**Run it before every push.** Not just when you think there might be issues. The checklist catches things you don't think to look for.
 
-**CHAOS's pattern is correct** - orchestration requires main conversation access.
+**Fix issues immediately.** If `/self-check` says NEEDS FIXES, address them before pushing. Don't push and plan to fix later.
 
----
+### /review-feedback — PR Reviews
 
-## Agent Definitions
+**Take feedback seriously.** Reviewers (ORDER + GHA) catch things you miss. If they flag something, fix it.
 
-CHAOS's agents (`.claude/agents/*.md`) are standard Claude Code subagents:
+**Fix root causes.** If a reviewer found one instance of an issue, check if the same issue exists elsewhere in your PR.
 
-```yaml
----
-name: explore
-description: Fast codebase exploration
-model: haiku
-allowed-tools: Read, Grep, Glob, Bash, WebFetch, WebSearch
----
+**Respond to everything.** Even if you disagree, explain your reasoning.
+
+### /learn — Reflection
+
+**Be specific.** "Use `trpc.router()` not `express.Router()`" is better than "Use the right router."
+
+**Include context.** Future sessions won't have your conversation history.
+
+**Promote conservatively.** Three occurrences means it's a real pattern. One occurrence is an anecdote.
+
+## Learnings System
+
+### Writing Good Observations
+
+```markdown
+## 2026-02-05 — task-123
+
+- **Observation**: The auth middleware uses Passport.js strategies, not custom middleware
+- **Context**: Found in src/middleware/auth.ts, used by all API routes
+- **Recommendation**: Always create new auth flows as Passport strategies
 ```
 
-This matches Claude's expected format exactly.
+### When to Run /learn
 
-### Tool Restrictions: CLI vs SDK
+- After every merged PR
+- After discovering something non-obvious about the codebase
+- After making a mistake that future sessions should avoid
 
-**Important**: The `allowed-tools` frontmatter only works with Claude Code CLI.
+### Pruning Learnings
 
-| Context | Tool Restrictions |
-|---------|-------------------|
-| Claude Code CLI | Frontmatter `allowed-tools` works |
-| Claude Agent SDK | Must use `allowedTools` in query config |
+If `learnings.md` grows large, `/learn` will archive promoted entries. You can also manually clean up by:
+1. Removing outdated observations (codebase has changed)
+2. Consolidating duplicate observations
+3. Moving promoted entries to the archive
 
-**SDK Example**:
-```python
-options = ClaudeAgentOptions(
-    cwd="/path/to/project",
-    setting_sources=["user", "project"],
-    allowed_tools=["Read", "Grep", "Glob"]  # SDK-level restriction
-)
+## Standards System
+
+Standards in `standards/` are the project's long-term memory. They evolve through the learning loop:
+
+1. Multiple sessions observe the same pattern
+2. `/learn` detects the pattern (3+ occurrences)
+3. Pattern is promoted to the appropriate standards file
+4. Future sessions read standards before writing code
+
+**Don't edit standards manually** unless you're correcting an error. Let the learning loop handle promotion.
+
+## Beads Workflow
+
+### Keep Beads Updated
+
+As you work, update the Beads issue with progress:
+
+```bash
+bd update <task-id> --note "Explored codebase, found existing auth patterns"
+bd update <task-id> --note "Implementation complete, running self-check"
+bd update <task-id> --note "Draft PR created: #42"
 ```
 
----
+This creates an audit trail and helps ORDER track progress.
 
-## Background Agent Execution
+### Beads + Context Compaction
 
-### The Pattern
-
-CHAOS uses `run_in_background: true` for all agent launches:
-
-```
-Task(explore, run_in_background: true):
-  Issue: [issue-id]
-  ...
-```
-
-This is a valid Claude Code feature. Background agents:
-1. Run concurrently while the main conversation continues
-2. Auto-inherit parent permissions (auto-deny unpermitted actions)
-3. Notify on completion with their output
-4. Cannot use MCP tools
-
-### Timeout Handling
-
-Background agents may hang in rare cases. Recommendations:
-
-1. **Session-level timeout**: Set `CLAUDE_CODE_MAX_TASK_DURATION_MS` environment variable
-2. **Manual recovery**: If an agent appears stuck:
-   - Check `/tasks` for running agents
-   - Use `Ctrl+C` to interrupt
-   - Resume the conversation and retry
-3. **Watchdog hook** (advanced): Add a `SubagentStart` hook that spawns a timeout monitor
-
-See [patterns.md](../templates/.claude/skills/orchestrate/patterns.md) for detailed guidance.
-
----
-
-## Context Management
-
-### The 500-Token Guideline
-
-All agents are instructed to return summaries under 500 tokens. This is **guidance, not enforcement**.
-
-**Why this matters**:
-- Orchestrator receives summaries from 6+ agents
-- Detailed output would bloat context rapidly
-- Full details persist in Beads issues and Git
-
-**If summaries grow too large**:
-- Agent responses may exceed the guideline
-- Context will fill faster
-- Consider more frequent Beads syncing
-
-**Acceptable range**: 500-1000 tokens is fine for complex summaries. The goal is keeping the orchestrator lean, not strict enforcement.
-
----
-
-## Beads Dependency
-
-CHAOS requires Beads (`bd` CLI) for:
-- Issue tracking (`bd create`, `bd show`, `bd close`)
-- Note persistence (`bd update --notes`)
-- Design storage (`bd update --design`)
-- Synchronization (`bd sync`)
-
-### Graceful Handling
-
-The installer checks for Beads and offers to install if missing. If Beads becomes unavailable during a session:
-
-1. **Preflight hook** (`skill_start`) runs `preflight.sh`
-2. **Session hooks** run `bd prime` with `|| true` (fails silently)
-3. Agents that can't reach Beads will report errors
-
-**Fallback mode** (not yet implemented):
-- Future versions may support local file-based fallback
-- Current version requires Beads
-
----
+Beads state is re-primed on context compaction (via the `PreCompact` hook). This means your task context survives even when the conversation is summarized.
 
 ## Hook Configuration
 
-### CHAOS's Installed Hooks
+### CHAOS Hooks
 
-`settings.local.json` configures:
+CHAOS installs two hooks:
 
-| Event | Matcher | Action |
-|-------|---------|--------|
-| `PreCompact` | (all) | `bd prime` |
-| `SessionStart` | (all) | `bd prime` |
-| `SubagentStart` | `explore\|plan\|implement\|verifier\|code-reviewer` | Log + `bd prime` |
-| `SubagentStop` | `implement` | `bd sync --flush-only` |
-
-### Potential Conflicts
-
-If your project already has hooks in `.claude/settings.local.json`:
-
-1. **CHAOS installation backs up existing file** to `CLAUDE.md.backup`
-2. **Manual merge may be needed** for custom hooks
-3. **Order is not guaranteed** when hooks from multiple sources run
-
-**Recommendations**:
-- Review `settings.local.json` after installation
-- Test hooks don't interfere with each other
-- Use specific matchers to scope hooks narrowly
+| Event | Action |
+|-------|--------|
+| `PreCompact` | `bd prime` — re-load Beads context |
+| `SessionStart` | `bd prime` + load learnings |
 
 ### Adding Custom Hooks
 
-To add hooks without conflicting:
+To add hooks without conflicting with CHAOS:
 
 ```json
 {
   "hooks": {
-    "SubagentStop": [
+    "PreCompact": [
       {
-        "matcher": "implement",
-        "hooks": [{ "type": "command", "command": "bd sync --flush-only" }]
+        "hooks": [
+          { "type": "command", "command": "bd prime" }
+        ],
+        "matcher": ""
       },
       {
-        "matcher": "your-custom-agent",
-        "hooks": [{ "type": "command", "command": "./your-script.sh" }]
+        "hooks": [
+          { "type": "command", "command": "./your-custom-hook.sh" }
+        ],
+        "matcher": ""
       }
     ]
   }
 }
 ```
 
-Use distinct matchers for different hooks.
+## SDK Compatibility
 
----
+### Tool Restrictions
 
-## SDK Usage Guide
-
-### Required Configuration
+The `allowed-tools` frontmatter in SKILL.md only works with Claude Code CLI. When using the SDK:
 
 ```python
-from claude_agent_sdk import query, ClaudeAgentOptions
-
 options = ClaudeAgentOptions(
     cwd="/path/to/project",
-    setting_sources=["user", "project"],  # REQUIRED to load skills/agents
-    allowed_tools=["Skill", "Task", "Read", "Write", "Edit", "Bash", "Grep", "Glob"]
+    setting_sources=["user", "project"],
+    allowed_tools=["Skill", "Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 )
 ```
 
-**Common mistake**: Forgetting `setting_sources` means skills won't load.
+### Loading Skills
 
-### Invoking Skills
+The SDK requires explicit `setting_sources` to load filesystem-based skills:
 
 ```python
-async for message in query(
-    prompt="/orchestrate 2025-01-25-my-feature",
-    options=options
-):
-    print(message)
+setting_sources=["user", "project"]  # Required!
 ```
-
-### Tool Restrictions per Agent
-
-Since frontmatter `allowed-tools` doesn't apply in SDK:
-
-```python
-# For read-only exploration
-explore_options = ClaudeAgentOptions(
-    setting_sources=["user", "project"],
-    allowed_tools=["Read", "Grep", "Glob", "Bash"]
-)
-
-# For implementation
-implement_options = ClaudeAgentOptions(
-    setting_sources=["user", "project"],
-    allowed_tools=["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
-)
-```
-
----
 
 ## Troubleshooting
 
-### Agent Not Using Correct Tools
-
-**Symptom**: Agent uses Write when it should be read-only
-**Cause**: Using SDK without explicit `allowedTools`
-**Fix**: Add tool restrictions to SDK configuration
-
 ### Skills Not Found
 
-**Symptom**: `/orchestrate` not recognized
-**Cause**: Missing `setting_sources` in SDK, or skill files not installed
-**Fix**:
-1. Verify `.claude/skills/orchestrate/SKILL.md` exists
-2. Add `setting_sources=["user", "project"]` to SDK config
+**Symptom**: `/work` not recognized
+**Fix**: Verify `.claude/skills/work/SKILL.md` exists and `setting_sources` includes `"project"`
 
 ### Beads Commands Fail
 
 **Symptom**: `bd: command not found`
-**Cause**: Beads not installed
-**Fix**: Run `go install github.com/steveyegge/beads/cmd/bd@latest` or re-run `~/chaos/install.sh`
+**Fix**: `go install github.com/steveyegge/beads/cmd/bd@latest`
 
-### Context Growing Too Fast
+### GitHub CLI Not Working
 
-**Symptom**: Conversation compacts frequently during orchestration
-**Cause**: Agent summaries exceeding guidelines
-**Fix**:
-1. Review agent outputs for verbosity
-2. Ensure agents are writing details to Beads
-3. Consider breaking large specs into smaller ones
+**Symptom**: `gh: command not found` or auth errors
+**Fix**: Install from https://cli.github.com/ and run `gh auth login`
+
+### Learnings Not Loading
+
+**Symptom**: Session doesn't reference past learnings
+**Fix**: Check `.chaos/learnings.md` exists. Run preflight: `.claude/scripts/preflight.sh`
 
 ### Hooks Not Running
 
-**Symptom**: `bd prime` not executing
-**Cause**: Hook configuration not loaded
+**Symptom**: `bd prime` not executing at session start
 **Fix**: Check `.claude/settings.local.json` exists and is valid JSON
-
----
-
-## Comparison: CHAOS vs Claude Patterns
-
-| Feature | Claude Standard | CHAOS Implementation | Status |
-|---------|-----------------|---------------------|--------|
-| Skill frontmatter | YAML with `description` | Correct | Good |
-| `disable-model-invocation` | For side-effect skills | Used on orchestrate/create-spec | Good |
-| SKILL.md size | < 500 lines | ~200 lines | Good |
-| Supporting files | Separate from SKILL.md | `patterns.md` companion | Good |
-| Agent definitions | `.claude/agents/*.md` | Correct format | Good |
-| `context: fork` | For isolated execution | Not used (correctly) | Good |
-| `allowed-tools` | CLI only | Documented limitation | Good |
-| Background execution | `run_in_background` | Used throughout | Good |
-
-**Overall**: CHAOS aligns well with Claude Code best practices. The main consideration is SDK compatibility for tool restrictions.

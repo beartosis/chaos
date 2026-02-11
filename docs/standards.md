@@ -1,6 +1,8 @@
 # Standards System
 
-CHAOS uses a low-context standards system inspired by [agent-os](https://github.com/stableborn/agent-os). Standards are small, focused documents that agents read on-demand rather than having all guidance preloaded.
+CHAOS uses a low-context standards system inspired by [agent-os](https://github.com/stableborn/agent-os). Standards are small, focused documents that Claude reads on-demand rather than having all guidance preloaded.
+
+In CHAOS v2, the standards system is a **living system** — the `/learn` skill promotes proven patterns from `.chaos/learnings.md` into `standards/` when they appear 3+ times across tasks.
 
 ## Why Standards Instead of Skills?
 
@@ -8,9 +10,10 @@ CHAOS uses a low-context standards system inspired by [agent-os](https://github.
 |--------|------------------|---------------------|
 | Context usage | All content loaded upfront | Only index loaded; content on-demand |
 | Granularity | Broad guidelines | Focused, domain-specific |
-| Per-task selection | No | Yes - specs can declare which apply |
+| Per-task selection | No | Yes - tasks can declare which apply |
 | Discovery | Skill descriptions in context | `standards.yml` lists all standards |
 | Maintenance | Edit single skill file | Edit specific standard files |
+| Evolution | Manual updates only | `/learn` promotes patterns automatically |
 
 ## Directory Structure
 
@@ -56,11 +59,11 @@ global:
     description: Keep changes focused, avoid over-engineering
 ```
 
-Agents can read this file to know what standards exist without loading all content.
+Claude can read this file to know what standards exist without loading all content.
 
 ### 2. On-Demand Loading
 
-Agents read specific standards relevant to their task:
+Claude reads specific standards relevant to the current task:
 
 ```markdown
 ## Standards
@@ -92,7 +95,7 @@ Specs can declare which standards apply:
 ...
 ```
 
-The orchestrator ensures agents prioritize declared standards.
+The `/work` skill ensures Claude reads declared standards before implementing.
 
 ## Writing Standards
 
@@ -189,16 +192,13 @@ Standards and skills serve different purposes:
 - `standards/global/commits.md` - Guidelines for commit messages
 - `/commit` skill - Interactive commit workflow
 
-## Migration from Skills
+## The Learning Loop
 
-If you previously used `coding-standards` and `testing-guide` skills:
+Standards evolve through the CHAOS learning loop:
 
-1. Standards are now in `standards/` directory
-2. Agents reference standards explicitly instead of preloading skills
-3. The old skills still exist but are deprecated
+1. **Observation**: During `/work`, Claude discovers a codebase pattern
+2. **Capture**: During `/learn`, the observation is recorded in `.chaos/learnings.md`
+3. **Promotion**: When 3+ sessions observe the same pattern, `/learn` promotes it to `standards/`
+4. **Application**: Future sessions read standards before writing code
 
-To remove old skills:
-```bash
-rm -rf .claude/skills/coding-standards
-rm -rf .claude/skills/testing-guide
-```
+This means your standards directory gets smarter over time without manual maintenance.

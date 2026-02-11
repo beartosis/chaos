@@ -1,5 +1,5 @@
 #!/bin/bash
-# verify.sh - Verify CHAOS installation
+# verify.sh - Verify CHAOS v2 installation
 
 set -euo pipefail
 
@@ -16,11 +16,10 @@ verify_installation() {
     echo "Checking directory structure..."
 
     local required_dirs=(
-        ".claude/agents"
         ".claude/skills"
         ".claude/scripts"
-        "specs"
-        ".CHAOS"
+        ".chaos"
+        ".chaos/framework"
     )
 
     for dir in "${required_dirs[@]}"; do
@@ -39,8 +38,9 @@ verify_installation() {
 
     local required_files=(
         ".claude/scripts/preflight.sh"
-        ".claude/skills/orchestrate/SKILL.md"
-        ".CHAOS/version"
+        ".claude/skills/work/SKILL.md"
+        ".chaos/learnings.md"
+        ".chaos/framework/version"
         "CLAUDE.md"
     )
 
@@ -71,15 +71,15 @@ verify_installation() {
 
     echo ""
 
-    # Check Beads configuration
+    # Check configuration
     echo "Checking configuration..."
 
-    if [[ -f "$PROJECT_ROOT/.CHAOS/version" ]]; then
-        source "$PROJECT_ROOT/.CHAOS/version"
+    if [[ -f "$PROJECT_ROOT/.chaos/framework/version" ]]; then
+        source "$PROJECT_ROOT/.chaos/framework/version"
         echo "  CHAOS Version: ${CHAOS_VERSION:-unknown}"
         echo "  Beads Version: ${BEADS_VERSION:-unknown}"
     else
-        echo "  [ERROR] .CHAOS/version not found"
+        echo "  [ERROR] .chaos/framework/version not found"
         ((errors++))
     fi
 
@@ -88,11 +88,18 @@ verify_installation() {
     # Check preflight script is executable
     if [[ -f "$PROJECT_ROOT/.claude/scripts/preflight.sh" ]]; then
         if [[ -x "$PROJECT_ROOT/.claude/scripts/preflight.sh" ]]; then
-            echo "Preflight script is executable: OK"
+            echo "  [OK] Preflight script is executable"
         else
-            echo "Preflight script not executable: fixing..."
-            chmod +x "$PROJECT_ROOT/.claude/scripts/preflight.sh"
+            echo "  [WARNING] Preflight script not executable"
+            echo "    Fix with: chmod +x $PROJECT_ROOT/.claude/scripts/preflight.sh"
+            ((warnings++))
         fi
+    fi
+
+    # Check no agent remnants
+    if [[ -d "$PROJECT_ROOT/.claude/agents" ]]; then
+        echo "  [WARNING] .claude/agents/ directory found (v1 remnant)"
+        ((warnings++))
     fi
 
     echo ""

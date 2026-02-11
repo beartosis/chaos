@@ -1,266 +1,199 @@
 # CHAOS Skills Catalog
 
-A comprehensive guide to CHAOS skills - what they do, when to use them, and how they work together.
+A guide to CHAOS v2 skills — the single-developer workflow.
 
 ## Quick Reference
 
-| Skill | Command | Purpose | Duration |
-|-------|---------|---------|----------|
-| [Create Spec](#create-spec) | `/create-spec [name]` | Build a spec interactively | 5-20 min |
-| [Review Spec](#review-spec) | `/review-spec [name]` | Validate spec completeness | 2-5 min |
-| [Orchestrate](#orchestrate) | `/orchestrate [name]` | Run full implementation pipeline | 10-60 min |
-| [Analyze](#analyze) | `/analyze` | Find codebase health issues | 5-15 min |
+| Skill | Command | Purpose |
+|-------|---------|---------|
+| [Work](#work) | `/work <task-id>` | Execute task from start to draft PR |
+| [Plan](#plan) | `/plan <goal>` | Explore codebase and design implementation approach |
+| [Self-Check](#self-check) | `/self-check` | Pre-push quality gate |
+| [Review Feedback](#review-feedback) | `/review-feedback` | Address PR review comments |
+| [Learn](#learn) | `/learn` | Post-task reflection and pattern promotion |
 
 ---
 
 ## Workflow Overview
 
 ```
-                    ┌─────────────────┐
-                    │  Human Intent   │
-                    └────────┬────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              │              │              │
-              ▼              ▼              ▼
-       ┌──────────┐   ┌──────────┐   ┌──────────┐
-       │ /analyze │   │/create-  │   │ GitHub   │
-       │          │   │  spec    │   │  Issue   │
-       └────┬─────┘   └────┬─────┘   └────┬─────┘
-            │              │              │
-            └──────────────┼──────────────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │ /review-spec │
-                    └──────┬───────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │ /orchestrate │
-                    └──────┬───────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │   Complete   │
-                    └──────────────┘
+    ORDER assigns task
+         │
+         ▼
+    ┌──────────┐
+    │  /work   │  Read task → Explore → Plan → Implement → Test
+    └────┬─────┘
+         │
+         ▼
+    ┌──────────────┐
+    │ /self-check  │  Run tests, review diff, verify criteria
+    └──────┬───────┘
+           │
+           ▼
+    Push branch → Draft PR
+           │
+           ▼
+    ORDER reviews → marks ready
+           │
+           ▼
+    GHA automated review
+           │
+           ▼
+    ┌──────────────────┐
+    │ /review-feedback │  Read comments → Fix → Push → Respond
+    └──────┬───────────┘
+           │
+           ▼
+    PR approved → Merge
+           │
+           ▼
+    ┌──────────┐
+    │  /learn  │  Reflect → Capture → Promote patterns
+    └──────────┘
 ```
 
 ---
 
 ## Skills Detail
 
-### Create Spec
+### Work
 
-**Command**: `/create-spec [feature-name]` or `/create-spec --from-issue <url>`
+**Command**: `/work <task-id>`
 
-**Purpose**: Transform a high-level goal or GitHub issue into a complete, actionable specification.
+**Purpose**: The flagship skill. Execute a complete task from reading the assignment to creating a draft PR.
 
 **When to Use**:
-- Starting a new feature
-- Formalizing requirements from a discussion
-- Converting a GitHub issue to a CHAOS spec
+- Starting a new task assigned by ORDER
+- Picking up a Beads issue to work on
 
 **How It Works**:
-1. **Context Assessment** - Checks for prior discussion or parses GitHub issue
-2. **Scout Phase** - Explores codebase for relevant patterns
-3. **Clarification** - Asks questions until SOLID understanding achieved
-4. **Generation** - Creates spec with all required sections
-5. **Validation** - Runs spec-reviewer automatically
+1. **Read** — Load task from Beads, read learnings, read standards
+2. **Explore** — Investigate codebase for patterns, find files to modify
+3. **Plan** — Break work into steps using TodoWrite
+4. **Implement** — Write production-grade code with tests
+5. **Self-Check** — Run /self-check before pushing
+6. **Ship** — Create branch, commit, push, open draft PR
 
-**Agents Used**: scout, spec-architect, spec-reviewer
-
-**Example**:
-```
-/create-spec dark-mode
-
-> What feature would you like to spec out?
-User: I want to add a dark mode toggle to settings
-
-> [Scout finds existing theme patterns...]
-> Should dark mode persist across sessions?
-User: Yes, save to localStorage
-
-> [Creates spec at specs/2025-02-03-dark-mode/]
-```
-
-**Output**: `specs/YYYY-MM-DD-[name]/SPEC.md` + context files
+**Context Used**: Beads task, `.chaos/learnings.md`, `standards/`
 
 ---
 
-### Review Spec
+### Plan
 
-**Command**: `/review-spec [spec-name]`
+**Command**: `/plan <goal>`
 
-**Purpose**: Validate that a specification is complete, clear, and ready for implementation.
+**Purpose**: Read-only exploration skill. Understand the goal, explore the codebase, and design an implementation approach before writing code.
 
 **When to Use**:
-- Before running orchestrate
-- After making changes to a spec
-- To get feedback on spec quality
+- Before starting a complex task
+- When multiple implementation approaches are possible
+- When you want to understand the scope before committing
 
 **How It Works**:
-1. Loads spec from `specs/[name]/SPEC.md`
-2. Checks against SOLID principles
-3. Validates all required sections
-4. Returns completeness score and issues
+1. **Understand** — Parse the goal and constraints
+2. **Explore** — Read-only codebase investigation
+3. **Design** — Create a structured implementation plan
+4. **Present** — Show the plan with file list, execution order, and risks
+5. **Wait** — Get user approval before implementing
 
-**Agents Used**: spec-reviewer
+**Output**: Structured plan with changes table, execution order, testing strategy, and risks
+
+---
+
+### Self-Check
+
+**Command**: `/self-check`
+
+**Purpose**: Pre-push quality gate. Catches issues before they reach review.
+
+**When to Use**:
+- Before pushing code (called automatically by /work)
+- After making changes to verify quality
 
 **Checklist**:
-- [ ] Goal is clear and specific
-- [ ] Requirements are testable
-- [ ] Constraints are documented
-- [ ] Acceptance criteria are verifiable
-- [ ] Scope boundaries are defined
-- [ ] Context files exist
+- [ ] Test suite passes
+- [ ] No hardcoded values, secrets, or debug code
+- [ ] Error handling is complete
+- [ ] Follows existing codebase patterns
+- [ ] Changes are scoped to the task
+- [ ] New behavior has tests
+- [ ] Acceptance criteria are met
 
-**Output**: Completeness score (0-100%) + specific issues
-
----
-
-### Orchestrate
-
-**Command**: `/orchestrate [spec-name]`
-
-**Purpose**: Execute the complete implementation pipeline from validated spec to reviewed code.
-
-**When to Use**:
-- After spec passes review
-- To automate feature implementation
-- For end-to-end workflow execution
-
-**How It Works**:
-1. **Spec Review** - Validates spec is ready
-2. **Work Breakdown** - Creates beads issues
-3. **Pipeline** - For each issue:
-   - Explore (find patterns)
-   - Plan (design approach)
-   - Implement (write code)
-   - Verify (run tests)
-   - Review (quality gate)
-4. **Completion** - Syncs all state, reports results
-
-**Agents Used**: spec-reviewer, explore, plan, implement, verifier, code-reviewer, dispute-resolver (on failure)
-
-**Failure Handling**:
-- 3 retries per stage
-- Automatic escalation to dispute-resolver
-- Human intervention for unresolvable issues
-
-**Output**: Implemented feature + completion report
+**Output**: `READY TO PUSH` or `NEEDS FIXES` with specific items
 
 ---
 
-### Analyze
+### Review Feedback
 
-**Command**: `/analyze` or `/analyze --create-spec`
+**Command**: `/review-feedback`
 
-**Purpose**: Systematically assess codebase health and identify improvement opportunities.
+**Purpose**: Address PR review comments from ORDER and GHA automated review.
 
 **When to Use**:
-- Regular health checks
-- Before major refactoring
-- Finding tech debt priorities
-- Security audits
+- After ORDER reviews your draft PR
+- After GHA automated review leaves comments
+- Whenever PR has unresolved review comments
 
 **How It Works**:
-1. **Exploration** - code-explorer scans codebase
-2. **Categorization** - Groups findings by type and severity
-3. **Prioritization** - Ranks by impact
-4. **Reporting** - Presents actionable findings
-5. **(Optional)** - Creates specs for selected issues
+1. **Read** — Fetch PR comments via `gh pr view`
+2. **Categorize** — Actionable fixes, questions, suggestions
+3. **Fix** — Address each actionable comment
+4. **Test** — Run test suite after fixes
+5. **Push** — Commit and push fixes
+6. **Respond** — Comment on PR summarizing what was addressed
 
-**Agents Used**: code-explorer, scout, spec-architect (with --create-spec)
+---
 
-**Finding Categories**:
-- **Security**: Injection risks, secrets, vulnerabilities
-- **Tech Debt**: TODOs, duplicates, outdated patterns
-- **Test Gaps**: Low coverage, missing edge cases
-- **Performance**: N+1 queries, blocking calls
-- **Documentation**: Stale docs, undocumented APIs
+### Learn
 
-**Output**: Prioritized health report
+**Command**: `/learn`
+
+**Purpose**: Post-task reflection. Capture what you learned and promote proven patterns to standards.
+
+**When to Use**:
+- After merging a PR
+- After completing a significant task
+- When you've discovered something future sessions should know
+
+**How It Works**:
+1. **Reflect** — What worked, what surprised you, what to avoid
+2. **Capture** — Append observations to `.chaos/learnings.md`
+3. **Scan** — Look for patterns appearing 3+ times
+4. **Promote** — Move proven patterns to `standards/`
+5. **Archive** — Move promoted entries to `.chaos/learnings-archive/`
+
+**The Learning Loop**:
+```
+Session observations → learnings.md → (3+ occurrences) → standards/
+                                                              ↓
+                                    Future sessions read standards first
+```
+
+---
+
+## Background Skills
+
+These are loaded automatically by Claude, not invoked directly.
+
+| Skill | Purpose |
+|-------|---------|
+| `coding-standards` | References `standards/` for code patterns and style |
+| `testing-guide` | References `standards/` for testing philosophy and patterns |
 
 ---
 
 ## Security Profiles
 
-Skills operate under different security constraints:
-
 | Profile | Access Level | Skills |
 |---------|--------------|--------|
-| `read_only` | Read files only | review-spec, coding-standards |
-| `standard` | Read/write within project | analyze |
-| `elevated` | External requests, full shell | orchestrate, create-spec |
-
----
-
-## Context Requirements
-
-### What Skills Need
-
-| Skill | Required | Recommended |
-|-------|----------|-------------|
-| create-spec | - | standards/standards.yml |
-| review-spec | specs/[name]/SPEC.md | specs/[name]/context/ |
-| orchestrate | specs/[name]/SPEC.md | standards/, agents/index.yml |
-| analyze | - | .CHAOS/analysis/config.yml |
-
----
-
-## Skill Chaining
-
-Skills are designed to work together:
-
-```bash
-# Full workflow
-/create-spec my-feature     # Build the spec
-/review-spec my-feature     # Validate it
-/orchestrate my-feature     # Implement it
-
-# Analysis workflow
-/analyze                    # Find issues
-/analyze --create-spec      # Turn finding into spec
-/orchestrate [spec-name]    # Fix the issue
-```
-
----
-
-## Thinking Triggers
-
-CHAOS agents use Anthropic's thinking hierarchy for deeper reasoning:
-
-| Level | Trigger | Used By | Purpose |
-|-------|---------|---------|---------|
-| Light | `think` | scout | Pattern recognition |
-| Moderate | `think hard` | implement, code-reviewer | Code analysis |
-| Deep | `think harder` | plan, dispute-resolver | Architecture decisions |
-| Maximum | `ultrathink` | spec-architect | Requirements clarity |
-
----
-
-## Troubleshooting
-
-### Skill Won't Start
-- Check preflight: `.claude/scripts/preflight.sh`
-- Ensure beads is installed: `bd --version`
-- Verify file exists: `ls specs/[name]/SPEC.md`
-
-### Orchestrate Keeps Failing
-- Check dispute-resolver output
-- Review beads issue notes: `bd show [id]`
-- Escalate to human if stuck
-
-### Analysis Misses Files
-- Check ignore patterns in `.CHAOS/analysis/config.yml`
-- Ensure paths are relative to project root
+| `read_only` | Read files only | self-check, coding-standards, testing-guide |
+| `standard` | Read/write within project | learn |
+| `elevated` | Full development access | work, review-feedback |
 
 ---
 
 ## See Also
 
-- [Agent Index](.claude/agents/index.yml) - Available agents
 - [Standards Index](standards/standards.yml) - Coding standards
+- [Learnings](.chaos/learnings.md) - Accumulated observations
 - [Architecture](docs/architecture.md) - System design
-- [Best Practices](docs/best-practices.md) - Usage patterns

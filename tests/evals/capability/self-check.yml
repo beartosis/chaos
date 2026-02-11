@@ -1,0 +1,39 @@
+# CHAOS v2 Eval: /self-check capability
+# Tests that the self-check skill correctly identifies quality issues
+#
+# Usage: ./tests/harness/runner.sh self-check capability
+
+name: self-check-capability
+description: Verify /self-check catches common quality issues and approves clean code
+skill: self-check
+trials: 3
+pass_threshold: 0.67
+
+tasks:
+  - id: clean-code-passes
+    type: positive
+    description: Clean, well-tested code should get READY TO PUSH
+    input: fixtures/self-check/pass/clean-diff.txt
+    expected_output:
+      contains: "READY TO PUSH"
+
+  - id: hardcoded-secrets-caught
+    type: positive
+    description: Code with hardcoded API keys should get NEEDS FIXES
+    input: fixtures/self-check/fail/hardcoded-secrets.txt
+    expected_output:
+      contains: "NEEDS FIXES"
+
+  - id: missing-tests-caught
+    type: positive
+    description: New code without tests should get NEEDS FIXES
+    input: fixtures/self-check/fail/no-tests.txt
+    expected_output:
+      contains: "NEEDS FIXES"
+
+  - id: debug-code-caught
+    type: positive
+    description: Console.log debug statements should be flagged
+    input: fixtures/self-check/fail/debug-code.txt
+    expected_output:
+      contains: "NEEDS FIXES"

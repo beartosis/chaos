@@ -2,247 +2,153 @@
 
 ## Overview
 
-CHAOS (Claude Handling Agentic Orchestration System) is a spec-driven orchestration framework that coordinates multiple AI agents to transform specifications into working code.
+CHAOS (Claude Handling Autonomous Orchestration System) is a skill-driven framework that treats each Claude Code conversation as a professional software developer. Instead of coordinating multiple agents, CHAOS provides workflow skills that guide a single conversation through the complete development lifecycle.
 
 ## Core Concepts
 
-### Specs
+### Single Developer Paradigm
 
-A spec is a markdown file describing what you want to build:
-- **Goal**: What we're achieving
-- **Requirements**: What must be done
-- **Constraints**: What must not change
-- **Acceptance Criteria**: How we know it's done
-- **Out of Scope**: What we're not doing
+Each CHAOS conversation is one developer working on one task:
+- Reads the task assignment and accumulated learnings
+- Explores the codebase to understand context
+- Plans the approach
+- Implements production-grade code with tests
+- Self-reviews before pushing
+- Creates a PR and addresses review feedback
+- Captures learnings for future sessions
 
-### Agents
+No subagents. No delegation. No background processes.
 
-Specialized AI agents handle different phases:
+### Skills as Workflow Guides
+
+Skills are markdown documents that guide Claude through multi-step workflows:
 
 ```
-┌─────────────────┐
-│  spec-reviewer  │  Validates spec completeness
-└────────┬────────┘
-         ↓
-┌─────────────────┐
-│    explore      │  Investigates codebase
-└────────┬────────┘
-         ↓
-┌─────────────────┐
-│     plan        │  Designs implementation
-└────────┬────────┘
-         ↓
-┌─────────────────┐
-│   implement     │  Writes code
-└────────┬────────┘
-         ↓
-┌─────────────────┐
-│    verifier     │  Checks acceptance criteria
-└────────┬────────┘
-         ↓
-┌─────────────────┐
-│  code-reviewer  │  Quality gate
-└─────────────────┘
+/work <task-id>      → Full task lifecycle
+/self-check          → Pre-push quality verification
+/review-feedback     → Address PR review comments
+/learn               → Post-task reflection and pattern promotion
 ```
 
 ### Beads Integration
 
-All agents follow a Beads-first workflow:
-- Read task context from beads issues (`bd show`)
-- Write discoveries to notes (`bd update --notes`)
-- Write plans to design field (`bd update --design`)
-- Close issues on completion (`bd close --reason`)
+Beads provides persistent work state:
+- Read task context: `bd show <task-id>`
+- Track progress: `bd update <id> --note "..."`
+- Close completed work: `bd close <id>`
+- Survives context compaction via `bd prime`
 
-## Execution Flow
+### Learning System
 
-### Phase 0: Preflight
+A self-reinforcing loop that accumulates project wisdom:
 
-Before any work begins, the orchestrator runs preflight checks:
-
-```bash
-.claude/scripts/preflight.sh
+```
+Observations → .chaos/learnings.md → (3+ occurrences) → standards/
+                                                              ↓
+                                    Future sessions read standards first
 ```
 
-If Beads is not installed, the preflight fails and suggests installation.
+## Workflow
 
-### Phase 1: Spec Review
+### Complete Task Lifecycle
 
-The `spec-reviewer` agent validates:
-- All sections are present
-- Requirements are specific
-- Acceptance criteria are testable
-- No conflicting constraints
+```
+1. /work <task-id>
+   ├── Read task from Beads
+   ├── Read .chaos/learnings.md
+   ├── Read standards/
+   ├── Explore codebase (Grep, Glob, Read)
+   ├── Plan approach (TodoWrite)
+   ├── Implement code + tests
+   ├── /self-check
+   ├── Create branch, commit, push
+   └── Create draft PR (gh pr create --draft)
 
-If issues are found, it asks clarifying questions via `AskUserQuestion`.
+2. ORDER reviews draft PR
+   └── Marks ready-for-review when satisfied
 
-### Phase 2: Work Breakdown
+3. GHA automated Claude review
+   └── Leaves review comments on PR
 
-The orchestrator analyzes the spec and creates beads issues with dependencies:
+4. /review-feedback
+   ├── Read PR comments (gh pr view)
+   ├── Address each comment
+   ├── Run tests
+   ├── Push fixes
+   └── Respond on PR
 
-```bash
-bd create --title="Explore: area" --type=task
-bd create --title="Plan: feature" --type=task
-bd create --title="Implement: component" --type=task
-bd dep add [implement-id] [plan-id]
-bd dep add [plan-id] [explore-id]
+5. PR approved → Merge
+   └── gh pr merge --squash
+
+6. /learn
+   ├── Reflect on what worked
+   ├── Capture observations
+   ├── Scan for promotable patterns
+   └── Promote to standards/
 ```
 
-Example breakdown:
+### PR Review Flow
+
 ```
-Explore: Understand existing greeting patterns
-    ↓
-Plan: Design greeting component
-    ↓
-Implement: Create greeting feature
-    ↓
-Verify: Check acceptance criteria
+CHAOS pushes draft PR
+         ↓
+ORDER reviews (subjective quality gate)
+         ↓ approves
+PR marked ready-for-review
+         ↓
+GHA automated Claude review (PR comments)
+         ↓
+CHAOS /review-feedback (same session, full context)
+         ↓ addresses all comments
+Both reviews pass → Merge
 ```
-
-### Phase 3: Execution Pipeline
-
-For each work unit:
-
-1. **Explore** (Haiku) - Fast codebase investigation
-   - Finds relevant files
-   - Identifies patterns to follow
-   - Notes potential challenges
-
-2. **Plan** (Sonnet) - Designs approach
-   - Lists files to modify
-   - Orders changes
-   - Specifies testing approach
-
-3. **Implement** (Opus) - Writes code
-   - Follows the plan
-   - Matches existing patterns
-   - Adds tests
-
-### Phase 4: Verification
-
-Two-stage quality gate:
-
-1. **Verifier** (Haiku) - Quick checks
-   - Acceptance criteria met?
-   - Tests pass?
-   - Files exist?
-
-2. **Code Reviewer** (Sonnet) - Deep review
-   - Has tests?
-   - Follows patterns?
-   - No security issues?
-   - Minimal changes?
-
-### Phase 5: Dispute Resolution
-
-On third failure, the `dispute-resolver` agent decides:
-- **RETRY**: Try a different approach
-- **ESCALATE**: Get human input
-
-## Context Management
-
-### The 500-Token Rule
-
-All agents return summaries under 500 tokens. This prevents context bloat in the main orchestrator.
-
-### Background Execution
-
-Agents run with `run_in_background: true`. The orchestrator:
-- Launches agent
-- Waits for notification
-- Receives summary only
-
-### Where Details Go
-
-| Information | Destination |
-|-------------|-------------|
-| Exploration findings | Beads notes |
-| Implementation plan | Beads design field |
-| Code changes | Git |
-| Test results | Summary in return |
 
 ## Template System
 
 ### Variable Substitution
 
 Templates use `${VARIABLE}` syntax:
-- `${CHAOS_ROOT}` - Framework location
-- `${PROJECT_ROOT}` - Project location
+- `${CHAOS_ROOT}` — Framework location
+- `${PROJECT_ROOT}` — Project location
+
+### Template vs Non-Template Files
+
+- `.tmpl` files are processed by the template engine (variable substitution)
+- `.md` files are copied as-is
+- Skills that reference `$ARGUMENTS` use `.tmpl` extension
 
 ## File Structure
 
 ```
-project/                    # Your project
+project/                        # Your project
 ├── .claude/
-│   ├── agents/             # Agent definitions
-│   ├── skills/             # Skill definitions
+│   ├── skills/
+│   │   ├── work/               # Task execution workflow
+│   │   ├── self-check/         # Pre-push quality gate
+│   │   ├── learn/              # Learning and pattern promotion
+│   │   ├── review-feedback/    # PR review handler
+│   │   ├── coding-standards/   # Standards reference (background)
+│   │   ├── testing-guide/      # Testing reference (background)
+│   │   └── index.yml           # Skill registry
 │   ├── scripts/
-│   │   └── preflight.sh    # Tooling checks
-│   └── settings.local.json # Claude Code config
-├── specs/                  # Your specifications
-├── .CHAOS/
-│   ├── framework_path      # Points to ~/chaos
-│   └── version             # Configuration
-└── CLAUDE.md               # Project instructions
+│   │   └── preflight.sh        # Tooling checks
+│   ├── settings.local.json     # Claude Code hooks
+│   └── SKILLS-CATALOG.md       # Skill documentation
+├── .chaos/
+│   ├── framework/              # Framework configuration
+│   │   ├── framework_path      # Points to ~/chaos
+│   │   ├── version             # Configuration
+│   │   └── skill-registry.json # Machine-readable skill registry
+│   ├── learnings.md            # Accumulated observations
+│   └── learnings-archive/      # Archived promoted observations
+├── standards/                  # Coding standards
+│   ├── standards.yml           # Index
+│   ├── global/                 # Universal standards
+│   ├── backend/                # Backend-specific
+│   ├── frontend/               # Frontend-specific
+│   └── testing/                # Testing standards
+└── CLAUDE.md                   # Project instructions
 ```
-
-## Configuration Schemas
-
-### Agent vs Skill Frontmatter
-
-Agents and skills use different YAML frontmatter schemas:
-
-**Agent definitions** (`.claude/agents/*.md`):
-```yaml
----
-name: implement
-description: Implements features following plans
-model: opus
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob
----
-```
-
-**Skill definitions** (`.claude/skills/*/SKILL.md`):
-```yaml
----
-name: orchestrate
-description: Runs the spec-to-completion workflow
-allowed-tools: Read, Grep, Glob, Bash, Task, TodoWrite
-disable-model-invocation: true
-argument-hint: "[spec-name]"
----
-```
-
-## SDK Compatibility
-
-### Important Limitations
-
-When using CHAOS workflows through the **Claude Agent SDK** (rather than Claude Code CLI directly):
-
-#### Tool Restrictions
-
-The `allowed-tools` frontmatter field in SKILL.md **only works with Claude Code CLI**. It does not apply when skills are invoked through the SDK.
-
-**Workaround**: When using the SDK, control tool access through the main `allowedTools` option in your query configuration.
-
-#### Loading Skills from Filesystem
-
-By default, the SDK does not load filesystem settings. You must explicitly configure `setting_sources`:
-
-```python
-options = ClaudeAgentOptions(
-    cwd="/path/to/project",
-    setting_sources=["user", "project"],  # Required!
-    allowed_tools=["Skill", ...]
-)
-```
-
-### Recommended Usage
-
-| Context | Recommendation |
-|---------|----------------|
-| Interactive development | Use Claude Code CLI (full feature support) |
-| CI/CD automation | Use SDK with explicit `allowed_tools` |
-| Programmatic orchestration | Use SDK, replicate tool restrictions in config |
 
 ## Hook Configuration
 
@@ -251,23 +157,38 @@ CHAOS installs hooks in `.claude/settings.local.json`:
 | Event | Purpose |
 |-------|---------|
 | `PreCompact` | Prime Beads before context compaction |
-| `SessionStart` | Prime Beads at session start |
-| `SubagentStart` | Log and prime Beads when agents start |
-| `SubagentStop` | Sync Beads after implement agent completes |
+| `SessionStart` | Prime Beads + load learnings at session start |
 
 ### Merging with Existing Hooks
 
-If your project already has hooks, CHAOS's installation backs up your existing `settings.local.json`. You may need to manually merge custom hooks.
+If your project already has hooks, CHAOS backs up your existing `settings.local.json`. You may need to manually merge custom hooks.
 
-**Best practices**:
-- Use specific matchers to scope hooks narrowly
-- Test hook interactions after installation
-- Review `settings.local.json` for duplicates
+## SDK Compatibility
 
-See [best-practices.md](best-practices.md) for detailed hook guidance.
+### Loading Skills from Filesystem
+
+The SDK does not load filesystem settings by default. Configure `setting_sources`:
+
+```python
+options = ClaudeAgentOptions(
+    cwd="/path/to/project",
+    setting_sources=["user", "project"],
+    allowed_tools=["Skill", "Read", "Write", "Edit", "Bash", "Grep", "Glob"]
+)
+```
+
+### Invoking Skills
+
+```python
+async for message in query(
+    prompt="/work task-123",
+    options=options
+):
+    print(message)
+```
 
 ## Further Reading
 
-- [best-practices.md](best-practices.md) - Claude compatibility analysis and recommendations
-- [writing-specs.md](writing-specs.md) - How to write effective specifications
-- [getting-started.md](getting-started.md) - Installation and first run guide
+- [CHAOS-VISION.md](CHAOS-VISION.md) — Design philosophy
+- [getting-started.md](getting-started.md) — Installation and first task
+- [best-practices.md](best-practices.md) — Usage patterns

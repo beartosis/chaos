@@ -1,406 +1,150 @@
-# CHAOS: Claude Handling Agentic Orchestration System
+# CHAOS Vision: Single Developer with Accumulated Wisdom
 
-**A spec-driven orchestration framework that transforms intent into working code through coordinated AI agents.**
+**Claude Handling Autonomous Orchestration System**
 
 ---
 
 ## Vision
 
-Software development is bottlenecked by specification. The gap between "I want X" and a clear, actionable spec is where most projects stall—requirements are ambiguous, edge cases unconsidered, existing patterns ignored.
+Software development is a craft. The best developers aren't fast — they're thorough. They read existing code before writing new code. They follow established patterns. They learn from experience and get better over time.
 
-CHAOS bridges this gap through **guided spec creation**. Rather than expecting humans to write perfect specifications, CHAOS asks the right questions, grounds answers in codebase reality, and produces specs that agents can execute reliably.
+CHAOS embodies this philosophy. Each Claude Code conversation is a professional software developer who:
+- **Reads before writing** — understands the codebase before making changes
+- **Follows standards** — uses established patterns, doesn't reinvent
+- **Learns from experience** — captures observations, promotes proven patterns
+- **Produces reviewable work** — clean PRs that pass review on the first try
 
-### The CHAOS Loop
+### From Orchestration to Craftsmanship
+
+CHAOS v1 coordinated 12 specialized agents through a complex pipeline. It was architecturally interesting but operationally fragile — context leaked between agents, failures cascaded, and the overhead of coordination often exceeded the cost of the work itself.
+
+CHAOS v2 takes a different approach: **one developer, one conversation, production-grade output.**
 
 ```
-Intent ──► Guided Questions ──► Specification ──► Orchestrated Execution ──► Working Code
+v1: 12 agents × coordination overhead × context management = complexity
+v2: 1 developer × good habits × accumulated wisdom = quality
 ```
 
-- **Humans provide intent**: A goal, a bug report, or just "make it better"
-- **System asks questions**: Grounded in actual codebase patterns and constraints
-- **Specs emerge from dialogue**: Clear, testable, scoped to what's achievable
-- **Agents execute deterministically**: Explore → Plan → Implement → Verify → Review
-
-### Philosophy
-
-> *"From chaos comes clarity"*
-
-- **Questions over assumptions**: When in doubt, ask. The system never guesses at requirements.
-- **Codebase-grounded**: Every question and decision references actual code, not hypotheticals.
-- **Specs as contracts**: The specification is the agreement between human intent and AI execution.
-- **Human authority preserved**: Humans prioritize, approve, and can override at any point.
+The insight is that a single Claude Code conversation, given the right guidance and accumulated project knowledge, produces better work than a team of specialized agents trying to coordinate.
 
 ---
 
-## Spec Creation Modes
+## The Learning Loop
 
-CHAOS supports three pathways from intent to specification:
+The most important innovation in CHAOS v2 is the self-reinforcing learning system.
 
-| Mode | Entry Point | Flow | Best For |
-|------|-------------|------|----------|
-| **Guided** | Human goal | Questions → Clarify → Spec | New features, complex requirements |
-| **From-Issue** | GitHub issue | Parse → Expand → Clarify → Spec | Bug fixes, user-reported issues |
-| **Codebase Analysis** | Automated crawl | Crawl → Identify → Propose → Spec | Tech debt, test gaps, improvements |
-
-### Mode 1: Guided Spec Creation
-
-Human provides a high-level goal. System guides them to a complete spec.
+### How It Works
 
 ```
-Human: "I want to add dark mode"
-                │
-                ▼
-        Scout explores codebase
-        ├─ Found: ThemeProvider in src/theme/
-        ├─ Found: CSS variables in styles/variables.css
-        └─ Found: No existing dark theme tokens
-                │
-                ▼
-        Clarifying questions:
-        ├─ "Should dark mode persist across sessions?"
-        ├─ "Toggle in header, settings, or both?"
-        └─ "Should it respect system preference?"
-                │
-                ▼
-        Human answers
-                │
-                ▼
-        spec-architect generates spec
-                │
-                ▼
-        specs/2025-02-03-dark-mode/SPEC.md
+Session 1: Developer works on auth feature
+           Discovers: "The codebase uses Passport.js, not custom auth"
+           → Captured in .chaos/learnings.md
+
+Session 2: Developer works on user profiles
+           Discovers: "Auth middleware is in src/middleware/auth.ts"
+           → Captured in .chaos/learnings.md
+
+Session 3: Developer works on API keys
+           Discovers: "All auth flows go through Passport strategies"
+           → Captured in .chaos/learnings.md
+           → PATTERN DETECTED: 3 observations about Passport.js
+           → PROMOTED to standards/backend/patterns.md:
+             "Use Passport.js strategies for all authentication flows"
+
+Session 4+: Developer reads standards first
+            Knows to use Passport.js without rediscovering it
 ```
 
-**Key principle**: Questions are grounded in what the codebase actually has, not generic best practices.
+### Why This Matters
 
-### Mode 2: From-Issue Spec Creation
+Each Claude Code session starts fresh — no memory of previous conversations. The learning system provides continuity:
 
-System takes an existing issue and expands it into a full spec.
+- **Learnings** (`.chaos/learnings.md`) — short-term memory. Raw observations from recent sessions.
+- **Standards** (`standards/`) — long-term memory. Proven patterns promoted from learnings.
+- **Archive** (`.chaos/learnings-archive/`) — graduated observations that have been promoted.
 
-```
-GitHub Issue #142: "Login fails silently on timeout"
-                │
-                ▼
-        Parse issue content:
-        ├─ Problem: Login fails without error message
-        ├─ Reproduction: Slow network, submit form
-        └─ Expected: Show timeout error to user
-                │
-                ▼
-        Expand with codebase context:
-        ├─ Found: AuthService.login() in src/services/
-        ├─ Found: No timeout handling in fetch wrapper
-        └─ Found: Toast component for error display
-                │
-                ▼
-        Targeted questions (if needed):
-        └─ "Should retry automatically or just show error?"
-                │
-                ▼
-        spec-architect generates spec
-                │
-                ▼
-        specs/2025-02-03-fix-login-timeout/SPEC.md
-```
-
-**Usage**: `/create-spec --from-issue <url>`
-
-### Mode 3: Codebase Analysis
-
-System proactively identifies improvement opportunities.
-
-```
-/analyze
-    │
-    ▼
-code-explorer crawls codebase
-    │
-    ▼
-Prioritized findings:
-├─ Tech Debt:
-│   ├─ [HIGH] Duplicate validation logic in 3 controllers
-│   └─ [MED] Deprecated API usage in payment module
-├─ Test Gaps:
-│   ├─ [HIGH] AuthService has 12% coverage
-│   └─ [MED] No integration tests for checkout flow
-├─ Security:
-│   └─ [HIGH] SQL concatenation in search endpoint
-└─ Performance:
-    └─ [LOW] N+1 query in user list endpoint
-    │
-    ▼
-Human reviews and selects: "Fix SQL concatenation"
-    │
-    ▼
-spec-architect generates spec
-    │
-    ▼
-specs/2025-02-03-fix-sql-injection/SPEC.md
-```
-
-**Usage**: `/analyze`
-
----
-
-## Agents
-
-CHAOS coordinates specialized agents through a deterministic pipeline.
-
-### Exploration & Analysis
-
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| **scout** | Haiku | Fast pattern discovery for feature context |
-| **explore** | Haiku | Detailed codebase investigation for work units |
-| **code-explorer** | Haiku | Systematic codebase health analysis |
-
-### Spec Lifecycle
-
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| **spec-reviewer** | Sonnet | Validates spec completeness and clarity |
-| **spec-architect** | Opus | Transforms intent/analysis into well-formed specs |
-
-### Implementation Pipeline
-
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| **plan** | Sonnet | Designs implementation approach |
-| **implement** | Opus | Writes code following standards |
-| **verifier** | Haiku | Checks acceptance criteria (PASS/FAIL) |
-| **code-reviewer** | Sonnet | Quality gate for patterns, tests, security |
-
-### Escalation & Support
-
-| Agent | Model | Purpose |
-|-------|-------|---------|
-| **dispute-resolver** | Sonnet | Handles failures: RETRY or ESCALATE to human |
-| **beads-helper** | Haiku | Executes Beads commands for issue tracking |
-| **tooling-setup** | Haiku | Diagnoses and repairs CHAOS dependencies |
-
-### New Agent: `code-explorer`
-
-**Model**: Haiku (fast, cheap—can run frequently)
-
-**Purpose**: Systematic codebase health analysis
-
-**Identifies**:
-- **Tech debt**: Duplicate code, outdated patterns, complexity hotspots, TODOs/FIXMEs
-- **Test coverage gaps**: Untested code paths, missing edge cases, low-coverage modules
-- **Security concerns**: Injection risks, hardcoded secrets, auth gaps, OWASP issues
-- **Performance issues**: N+1 queries, missing indexes, blocking calls, memory leaks
-- **Documentation gaps**: Undocumented APIs, stale READMEs, missing type annotations
-
-**Output**: Prioritized summary of improvement opportunities with severity and location.
-
-**Philosophy**: Crawls slowly and thoroughly. Better to find fewer issues with high confidence than many false positives.
-
-### New Agent: `spec-architect`
-
-**Model**: Opus (thoughtful, thorough—specs require precision)
-
-**Purpose**: Transform improvement opportunities into executable specifications
-
-**Takes**:
-- `code-explorer`'s analysis summary, OR
-- Human's high-level goal, OR
-- Parsed GitHub issue content
-- Plus: Codebase context from scout/explore
-
-**Produces**:
-- Complete spec following CHAOS format:
-  - Goal, Requirements, Constraints, Acceptance Criteria, Out of Scope
-- Context files:
-  - `patterns.md` — Existing patterns to follow
-  - `references.md` — Files to modify
-  - `decisions.md` — Design decisions made during creation
-- Dependency ordering when multiple specs relate
-
-**Key behavior**: Asks clarifying questions via `AskUserQuestion` when requirements are ambiguous. Never assumes.
+The system gets smarter over time without any external training or fine-tuning. It's just structured note-taking with a promotion threshold.
 
 ---
 
 ## Skills
 
-| Skill | Purpose |
-|-------|---------|
-| `/create-spec [name]` | Guided spec creation from goal |
-| `/create-spec --from-issue <url>` | Create spec from GitHub issue |
-| `/analyze` | Run codebase health analysis |
-| `/review-spec [name]` | Validate spec completeness |
-| `/orchestrate [name]` | Execute spec through agent pipeline |
+CHAOS v2 has four user-invocable skills and two background reference skills:
+
+### `/work <task-id>` — The Developer
+
+The flagship skill. Guides Claude through the complete task lifecycle:
+1. Read the task, learnings, and standards
+2. Explore the codebase
+3. Plan the approach
+4. Implement with tests
+5. Self-check before pushing
+6. Create a draft PR
+
+This replaces the entire v1 pipeline (spec-reviewer → explore → plan → implement → verifier → code-reviewer) with a single, coherent workflow.
+
+### `/self-check` — The Inner Critic
+
+Pre-push quality gate. Before pushing code, Claude runs through a checklist:
+- Tests pass
+- No hardcoded values or secrets
+- Follows existing patterns
+- Changes are scoped to the task
+- Acceptance criteria are met
+
+This replaces v1's verifier and code-reviewer agents.
+
+### `/review-feedback` — The Responsive Developer
+
+When PR reviews come back (from ORDER or GHA), Claude reads the comments, addresses each one, and pushes fixes. Same session, full context — no handoff loss.
+
+### `/learn` — The Reflective Practitioner
+
+After completing a task, Claude reflects on what happened:
+- What worked well?
+- What was surprising?
+- What should future sessions know?
+
+Observations go to `learnings.md`. Patterns that appear 3+ times get promoted to `standards/`.
 
 ---
 
-## Execution Pipeline
+## Integration with ORDER
 
-Once a spec exists, `/orchestrate` executes it through a fixed pipeline:
+CHAOS is the developer. ORDER is the Engineering Lead.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    ORCHESTRATION PIPELINE                    │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Spec ──► spec-reviewer validates                           │
-│              │                                               │
-│              ▼                                               │
-│         Work Breakdown (create Beads issues)                │
-│              │                                               │
-│              ▼                                               │
-│         For each work unit:                                 │
-│         ┌─────────────────────────────────────┐             │
-│         │  explore ──► plan ──► implement     │             │
-│         │       │                    │        │             │
-│         │       └──── retry (max 3) ─┘        │             │
-│         │                    │                │             │
-│         │              verifier               │             │
-│         │                    │                │             │
-│         │             code-reviewer           │             │
-│         └─────────────────────────────────────┘             │
-│              │                                               │
-│              ▼                                               │
-│         On 3rd failure: dispute-resolver                    │
-│         ├─ RETRY with new approach                          │
-│         └─ ESCALATE to human                                │
-│              │                                               │
-│              ▼                                               │
-│         Completion: Close Beads, sync, report               │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
+| Role | CHAOS | ORDER |
+|------|-------|-------|
+| Task assignment | Receives tasks | Assigns tasks |
+| Code writing | Implements features | Reviews PRs |
+| Quality | Self-check + addresses reviews | Subjective quality gate |
+| Planning | Plans individual tasks | Breaks specs into tasks |
+| Learning | Captures observations | Sets team standards |
 
-### Three-Strike Rule
-
-Each work unit gets 3 attempts:
-1. First attempt: Agent tries standard approach
-2. Second attempt: Retry with error context
-3. Third attempt: Final retry with accumulated learnings
-4. After 3 failures: `dispute-resolver` decides RETRY (with guidance) or ESCALATE (to human)
-
-No infinite loops. No silent failures.
-
----
-
-## Human-in-the-Loop Touchpoints
-
-CHAOS is designed for supervised operation. Humans intervene at these points:
-
-| Touchpoint | When | Human Action |
-|------------|------|--------------|
-| **Spec clarification** | `spec-architect` needs decisions | Answer questions about requirements |
-| **Analysis prioritization** | `code-explorer` found issues | Select which improvements to pursue |
-| **Failure escalation** | 3 failures on work unit | Choose retry approach or adjust requirements |
-| **Final review** | Pipeline complete | Review changes before merge |
-
----
-
-## Beads Integration
-
-CHAOS uses **Beads** for persistent issue tracking and audit trails.
-
-### Workflow
-
-```bash
-# Orchestrator creates issues
-bd create --title="Explore: auth patterns" --type=task
-
-# Agents read context
-bd show [issue-id]
-
-# Agents write discoveries
-bd update [issue-id] --notes="Found: existing JWT validation in..."
-
-# Agents complete work
-bd close [issue-id] --reason="Implemented X, tests added"
-
-# Orchestrator syncs
-bd sync --flush-only
-```
-
-### Why Beads?
-
-- **Persistence**: Work survives context compaction
-- **Audit trail**: Every decision is logged
-- **Dependencies**: Issues can depend on each other
-- **Human visibility**: Humans can inspect progress at any time
-
----
-
-## Configuration
-
-### Analysis Configuration
-
-```yaml
-# .CHAOS/analysis/config.yml
-focus_areas:
-  - tech_debt
-  - test_coverage
-  - security
-  - performance
-  - documentation
-
-severity_threshold: medium    # Only report medium+ severity
-
-ignore_paths:
-  - vendor/
-  - node_modules/
-  - "*.min.js"
-```
-
-### Project Structure
+### The Full Workflow
 
 ```
-project/
-├── .claude/
-│   ├── agents/           # Agent definitions
-│   ├── skills/           # Skill definitions
-│   └── settings.local.json
-├── specs/                # Generated specifications
-│   └── YYYY-MM-DD-name/
-│       ├── SPEC.md
-│       └── context/
-├── standards/            # Coding standards
-└── .CHAOS/
-    ├── version
-    ├── framework_path
-    └── analysis/         # code-explorer results
-        ├── latest.json
-        └── history/
+1. Human writes a spec (or ORDER generates from roadmap)
+2. ORDER: /plan-work <spec> → breaks into PR-sized tasks
+3. ORDER: assigns task to CHAOS instance
+4. CHAOS: /work <task-id> → implements → draft PR
+5. ORDER: reviews draft PR → marks ready-for-review
+6. GHA: automated Claude review on PR
+7. CHAOS: /review-feedback → addresses comments
+8. Both approve → CHAOS merges PR
+9. CHAOS: /learn → captures observations
 ```
 
 ---
 
-## Autonomous Operation
+## Design Principles
 
-CHAOS is designed with humans in the loop—answering questions, prioritizing improvements, resolving disputes.
+1. **Simplicity over sophistication** — A single conversation doing good work beats a complex multi-agent system doing mediocre work.
 
-For fully autonomous, human-free operation, see **ORDER** (Optional Resource During Extended Runtimes). ORDER is an optional plugin that intercepts CHAOS's human escalation points:
+2. **Standards over instructions** — Rather than telling each session what to do, build up standards that all sessions follow.
 
-| CHAOS Behavior | ORDER Behavior |
-|----------------|----------------|
-| `spec-architect` asks human | `order-oracle` decides based on codebase |
-| `dispute-resolver` escalates | `order-arbiter` retries or skips, never escalates |
-| Human prioritizes analysis | ORDER processes all or uses configured rules |
+3. **Experience over training** — The learning system provides project-specific knowledge that no amount of pre-training can match.
 
-CHAOS remains fully functional without ORDER. ORDER simply adds automation for batch processing and overnight runs.
+4. **Quality over speed** — A clean first draft that passes review is faster than a quick draft that needs three rounds of fixes.
 
-See [ORDER-VISION.md](ORDER-VISION.md) for details.
-
----
-
-## Summary
-
-CHAOS provides three pathways from intent to implementation:
-
-```
-Guided:           Human Goal ─────► Questions ─────► Spec ─────► Orchestrate
-From-Issue:       GitHub Issue ───► Parse ─────────► Spec ─────► Orchestrate
-Codebase Analysis: /analyze ──────► Identify ──────► Spec ─────► Orchestrate
-```
-
-The system encourages:
-- **Questions over assumptions**: Never guess at requirements
-- **Codebase-grounded decisions**: Every question references actual code
-- **Human authority**: Humans prioritize, approve, and can override
-
-CHAOS transforms the spec-writing bottleneck into a collaborative dialogue where AI asks the right questions and humans provide the right answers.
+5. **Persistence over memory** — Beads issues and learnings files survive context compaction. Nothing important is lost.

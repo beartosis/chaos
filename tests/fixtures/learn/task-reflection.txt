@@ -1,0 +1,35 @@
+# Simulated task context for /learn evaluation
+#
+# Scenario: Developer just completed a task to add email validation.
+# The task went smoothly but revealed a pattern about the codebase.
+
+## Task Summary
+
+Task: add-email-validation
+Status: Merged (PR #42)
+
+## What Happened
+
+Implemented email validation for the user registration form. Added a new
+`validateEmail` method to the existing `InputValidator` class and wrote
+tests covering valid emails, invalid formats, and edge cases.
+
+## Observations
+
+1. The codebase has an existing `InputValidator` class in `src/utils/validator.ts`
+   that handles all input validation. New validation should extend this class
+   rather than creating standalone functions.
+
+2. Test patterns follow a `describe/it` structure with clear naming like
+   "should accept valid X" and "should reject invalid X". Tests are colocated
+   in a parallel `tests/` directory structure.
+
+3. The `ValidationError` class from `src/utils/errors.ts` is the standard way
+   to represent validation failures. It includes a `code` field for programmatic
+   handling.
+
+## Key Takeaway
+
+Always check `src/utils/` for existing utility classes before creating new ones.
+The codebase prefers extending existing utilities over creating new standalone
+helpers.

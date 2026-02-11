@@ -1,0 +1,74 @@
+#!/bin/bash
+# CHAOS v2 — Scan staged diff for common quality issues
+#
+# Usage: bash .claude/scripts/check-diff.sh
+#
+# Scans the staged diff (git diff --cached) for:
+# - Hardcoded secrets / API keys
+# - Debug code (console.log, print statements, debugger)
+# - TODO/FIXME/HACK comments
+#
+# Exits 0 if clean, 1 if issues found.
+
+set -euo pipefail
+
+echo "=== CHAOS: Check Diff ==="
+echo ""
+
+ISSUES=0
+DIFF=$(git diff --cached)
+
+if [[ -z "$DIFF" ]]; then
+    echo "No staged changes found. Stage files first with git add."
+    exit 1
+fi
+
+# --- Secrets / API Keys ---
+echo "Checking for secrets..."
+SECRETS_PATTERN='(api[_-]?key|api[_-]?secret|password|passwd|secret[_-]?key|access[_-]?token|private[_-]?key)\s*[:=]\s*["\x27][^\s"'\'']{8,}'
+if echo "$DIFF" | grep -iP "$SECRETS_PATTERN" 2>/dev/null | grep -q '^+'; then
+    echo "FAIL: Possible hardcoded secrets detected in staged diff"
+    echo "$DIFF" | grep -iP "$SECRETS_PATTERN" | grep '^+' | head -5
+    echo ""
+    ISSUES=$((ISSUES + 1))
+else
+    echo "OK: No secrets detected"
+fi
+
+# --- Debug Code ---
+echo ""
+echo "Checking for debug code..."
+DEBUG_PATTERN='(console\.(log|debug|trace)|debugger;|print\(|pdb\.set_trace|binding\.pry|byebug)'
+DEBUG_HITS=$(echo "$DIFF" | grep -P "$DEBUG_PATTERN" | grep '^+' | grep -v '^+++' || true)
+if [[ -n "$DEBUG_HITS" ]]; then
+    echo "FAIL: Debug code found in staged diff"
+    echo "$DEBUG_HITS" | head -5
+    echo ""
+    ISSUES=$((ISSUES + 1))
+else
+    echo "OK: No debug code detected"
+fi
+
+# --- TODOs / FIXMEs ---
+echo ""
+echo "Checking for TODO/FIXME/HACK..."
+TODO_HITS=$(echo "$DIFF" | grep -P '(TODO|FIXME|HACK|XXX)\b' | grep '^+' | grep -v '^+++' || true)
+if [[ -n "$TODO_HITS" ]]; then
+    echo "WARN: TODO/FIXME/HACK comments found in staged diff"
+    echo "$TODO_HITS" | head -5
+    echo ""
+    ISSUES=$((ISSUES + 1))
+else
+    echo "OK: No TODO/FIXME/HACK comments"
+fi
+
+# --- Summary ---
+echo ""
+echo "================================"
+if [[ $ISSUES -eq 0 ]]; then
+    echo "DIFF CHECK PASSED"
+    exit 0
+else
+    echo "DIFF CHECK: $ISSUES issue(s) found"
+    exit 1
+fi

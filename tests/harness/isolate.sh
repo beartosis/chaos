@@ -1,5 +1,5 @@
 #!/bin/bash
-# Environment isolation helpers for CHAOS agent evals
+# Environment isolation helpers for CHAOS skill evals
 # Provides clean, isolated environments for each trial run
 
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -21,6 +21,12 @@ create_isolated_env() {
     # Copy codebase to isolated environment
     cp -r "$source_dir"/* "$workdir/"
 
+    # Set up minimal CHAOS structure for skill testing
+    mkdir -p "$workdir/.chaos"
+    echo "# Project Learnings" > "$workdir/.chaos/learnings.md"
+    mkdir -p "$workdir/.chaos/framework"
+    echo "CHAOS_VERSION=2.0.0" > "$workdir/.chaos/framework/version"
+
     echo "$workdir"
 }
 
@@ -37,24 +43,17 @@ cleanup_isolated_env() {
     fi
 }
 
-# Run an agent in isolation with timeout
-# Usage: run_isolated_agent "spec-reviewer" "input.md" "$workdir" 300
-run_isolated_agent() {
-    local agent="$1"
+# Run a skill in isolation with timeout
+# Usage: run_isolated_skill "self-check" "input.md" "$workdir" 300
+run_isolated_skill() {
+    local skill="$1"
     local input="$2"
     local workdir="$3"
     local timeout_sec="${4:-300}"
     local mock="${5:-false}"
 
-    local output_file="$workdir/agent_output.txt"
+    local output_file="$workdir/skill_output.txt"
     local exit_code_file="$workdir/exit_code.txt"
-
-    # Get the agent prompt from CHAOS agents directory
-    local agent_file="$TESTS_DIR/../templates/.claude/agents/${agent}.md.tmpl"
-    if [[ ! -f "$agent_file" ]]; then
-        # Try without .tmpl extension
-        agent_file="$TESTS_DIR/../templates/.claude/agents/${agent}.md"
-    fi
 
     # Read the input file content
     local input_content=""
@@ -65,49 +64,28 @@ run_isolated_agent() {
     fi
 
     if [[ "$mock" == "true" ]]; then
-        # Mock mode - don't call CLI, return valid JSON
+        # Mock mode - don't call CLI, return valid output
         cat > "$output_file" <<'MOCK_EOF'
-```json
-{
-  "status": "APPROVED",
-  "score": 0.85,
-  "summary": "Mock evaluation - spec appears complete",
-  "issues": []
-}
-```
+READY TO PUSH
+
+All checks passed:
+- Tests pass
+- No hardcoded values
+- Follows existing patterns
+- Changes scoped to task
 MOCK_EOF
         echo "0" > "$exit_code_file"
     else
-        # Build prompt that requests structured JSON output
-        local prompt="You are evaluating a software specification for completeness.
+        # Build prompt for skill evaluation
+        local prompt="You are running the /$skill skill.
 
-## Specification to Review:
+## Input:
 
 $input_content
 
-## Evaluation Criteria:
+## Instructions:
 
-A complete spec must have:
-1. Clear, specific goal (not vague)
-2. Actionable requirements (not abstract like 'improve things')
-3. Concrete acceptance criteria (testable, not 'users are happy')
-4. Defined constraints
-5. Clear scope boundaries
-
-## Required Output Format:
-
-You MUST respond with ONLY a JSON object (no other text):
-
-\`\`\`json
-{
-  \"status\": \"APPROVED\" or \"NEEDS_WORK\",
-  \"score\": 0.0 to 1.0,
-  \"summary\": \"one sentence summary\",
-  \"issues\": [\"issue 1\", \"issue 2\"] or []
-}
-\`\`\`
-
-Evaluate the spec and return ONLY the JSON."
+Execute the skill and produce the expected output format."
 
         # Run Claude Code CLI in print mode
         (
@@ -121,9 +99,9 @@ Evaluate the spec and return ONLY the JSON."
 }
 
 # Run multiple trials for a single task
-# Usage: run_trials "spec-reviewer" "input.md" "simple-crud" 3
+# Usage: run_trials "self-check" "input.md" "simple-crud" 3
 run_trials() {
-    local agent="$1"
+    local skill="$1"
     local input="$2"
     local codebase="$3"
     local num_trials="$4"
@@ -133,8 +111,7 @@ run_trials() {
     for i in $(seq 1 "$num_trials"); do
         local workdir=$(create_isolated_env "$codebase")
 
-        if run_isolated_agent "$agent" "$input" "$workdir"; then
-            # Grade the output (placeholder - would use graders)
+        if run_isolated_skill "$skill" "$input" "$workdir"; then
             ((passes++)) || true
         fi
 

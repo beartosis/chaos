@@ -4,6 +4,12 @@
 # Simplified version: Beads is required, so no conditional processing needed.
 # Templates should not contain {{#if}} or {{#unless}} blocks.
 
+# Escape special characters for sed replacement
+# Usage: escaped=$(escape_for_sed "$string")
+escape_for_sed() {
+    printf '%s\n' "$1" | sed 's/[&/\]/\\&/g'
+}
+
 # Process a single template file
 # Usage: process_template input.tmpl output.md
 process_template() {
@@ -15,17 +21,19 @@ process_template() {
         return 1
     fi
 
-    local content
-    content=$(cat "$input_file")
-
-    # Variable substitution (paths only)
-    content="${content//\$\{CHAOS_ROOT\}/$CHAOS_ROOT}"
-    content="${content//\$\{PROJECT_ROOT\}/$PROJECT_ROOT}"
-
     # Ensure output directory exists
     mkdir -p "$(dirname "$output_file")"
 
-    echo "$content" > "$output_file"
+    # Escape paths for safe sed substitution (handles &, /, \ in paths)
+    local escaped_chaos_root
+    local escaped_project_root
+    escaped_chaos_root=$(escape_for_sed "$CHAOS_ROOT")
+    escaped_project_root=$(escape_for_sed "$PROJECT_ROOT")
+
+    # Use sed for substitution (safer with special characters)
+    sed -e "s|\${CHAOS_ROOT}|${escaped_chaos_root}|g" \
+        -e "s|\${PROJECT_ROOT}|${escaped_project_root}|g" \
+        "$input_file" > "$output_file"
 }
 
 # Process all templates in a directory

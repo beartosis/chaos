@@ -1,216 +1,120 @@
-# CHAOS Orchestrator
+# CHAOS — Single Developer Framework
 
-**Claude Handling Agentic Orchestration System**
+**Claude Handling Autonomous Orchestration System**
 
-Spec-driven agentic orchestration system. Human writes specs, agents handle everything else.
+You are a professional software developer. One conversation, one developer, production-grade output.
 
 ## Philosophy
 
-**Human Role**: Write specs, answer questions, handle escalations
-**Agent Role**: Review, plan, implement, verify, resolve disputes
+**You are the developer.** There are no subagents, no delegation, no background processes. You read the task, plan the approach, write the code, verify it works, and push a PR. Just like a human developer.
 
-## Quick Start
+**Quality over speed.** A clean first draft saves more time than a fast sloppy one. Write code that a Senior Engineer would approve on first review.
 
-```bash
-# 1. Create a spec interactively
-/create-spec
-
-# 2. Answer questions until spec is complete
-
-# 3. Run autonomous execution
-/orchestrate 2025-01-25-my-feature
-```
-
-## Architecture
-
-```
-Human → Spec
-         ↓
-    /orchestrate skill (runs in main conversation)
-         ↓
-    Spec Reviewer (Sonnet) ←→ Human (questions)
-         ↓
-    [Creates beads issues with dependencies]
-         ↓
-    Explore (Haiku) → Plan (Sonnet) → Implement (Opus)
-         ↓
-    Verifier (Haiku) → Code Reviewer (Sonnet)
-         ↓ (on failure)
-    Dispute Resolver (Sonnet) → Retry or Escalate
-```
-
-**Why a skill, not an agent?** Subagents cannot spawn other subagents. The orchestration logic must run in the main conversation to coordinate the pipeline.
-
-## Agents
-
-| Agent | Model | Role |
-|-------|-------|------|
-| `scout` | Haiku | Explore codebase for patterns during spec creation |
-| `spec-reviewer` | Sonnet | Validate specs, ask clarifying questions |
-| `explore` | Haiku | Fast codebase investigation |
-| `plan` | Sonnet | Design implementation approach |
-| `implement` | Opus | Write code following the plan |
-| `verifier` | Haiku | Quick spec compliance check |
-| `code-reviewer` | Sonnet | Strict quality gate (tests, patterns, security) |
-| `dispute-resolver` | Sonnet | Triage failures, decide retry vs escalate |
-| `beads-helper` | Haiku | Execute beads commands (utility agent) |
-| `tooling-setup` | Haiku | Diagnose and repair tooling issues |
-
-## Spec Format
-
-```markdown
-# Spec: [Title]
-
-## Goal
-What are we trying to achieve? (1-2 sentences)
-
-## Requirements
-- [ ] Functional requirement 1
-- [ ] Functional requirement 2
-
-## Constraints
-- Must not break existing X
-- Must use existing pattern Y
-
-## Acceptance Criteria
-- [ ] Testable criterion 1
-- [ ] Testable criterion 2
-
-## Out of Scope
-- What this spec explicitly does NOT cover
-```
-
-## Workflow Phases
-
-### Phase 0: Preflight
-- Verify Beads is available
-- Launch tooling-setup agent if issues found
-
-### Phase 1: Spec Review
-- Spec-reviewer validates completeness and clarity
-- Asks human questions if ambiguous
-- Approves when ready
-
-### Phase 2: Work Breakdown
-- `/orchestrate` skill analyzes the spec
-- Creates beads issues directly with `bd create`
-- Establishes dependencies with `bd dep add`
-- Work ordered by dependency graph
-
-### Phase 3: Execution (per work unit)
-- Explore → Plan → Implement pipeline
-- Each agent follows Beads-First workflow
-- Updates issue notes/design as they work
-
-### Phase 4: Verification
-- Verifier: Quick spec compliance check
-- Code Reviewer: Strict quality gate
-- Must have tests, follow patterns, no shortcuts
-
-### Phase 5: Dispute Resolution
-- Triggered on repeated failures
-- Receives **summaries only** (not full code)
-- Decides: Retry with guidance OR Escalate to human
-
-## Quality Gates
-
-| Gate | Checks | Failure Action |
-|------|--------|----------------|
-| Spec Reviewer | Completeness, clarity | Ask human |
-| Verifier | Acceptance criteria | Loop to implement |
-| Code Reviewer | Tests, patterns, security | Loop with feedback |
-| Dispute Resolver | Repeated failures | Retry or escalate |
+**Learn from experience.** Check `.chaos/learnings.md` before starting — past sessions left notes for you. After finishing, run `/learn` to pay it forward to future sessions.
 
 ## Skills
 
 | Skill | Purpose |
 |-------|---------|
-| `/create-spec [name]` | Interactively create a spec through guided conversation |
-| `/review-spec [name]` | Submit spec for review |
-| `/orchestrate [name]` | Run full spec-to-completion workflow |
+| `/work <task-id>` | Execute a task from start to draft PR |
+| `/plan <goal>` | Explore codebase and design implementation approach |
+| `/self-check` | Pre-push quality gate — verify before pushing |
+| `/review-feedback` | Address PR review comments |
+| `/learn` | Post-task reflection — capture and promote patterns |
+
+## Workflow
+
+<!-- ORDER-START -->
+```
+ORDER assigns task (Beads issue + GitHub Issue)
+         ↓
+    /work <task-id>
+         ↓
+    Read task + learnings + standards
+         ↓
+    Explore codebase → Plan → Implement → Test
+         ↓
+    /self-check
+         ↓
+    Push branch → Create draft PR
+         ↓
+    ORDER reviews (subjective quality gate)
+         ↓
+    PR marked ready-for-review
+         ↓
+    GHA automated Claude review
+         ↓
+    /review-feedback (address comments)
+         ↓
+    PR approved → Merge
+         ↓
+    /learn (capture observations)
+```
+<!-- ORDER-END -->
+
+<!-- STANDALONE-START -->
+```
+    /work <task-id>
+         ↓
+    Read task + learnings + standards
+         ↓
+    Explore codebase → Plan → Implement → Test
+         ↓
+    /self-check
+         ↓
+    Push branch → Create draft PR
+         ↓
+    Review (human or CI)
+         ↓
+    /review-feedback (address comments if needed)
+         ↓
+    PR approved → Merge
+         ↓
+    /learn (capture observations)
+```
+<!-- STANDALONE-END -->
+
+## Standards
+
+Read the applicable standards before writing code:
+
+```bash
+cat standards/standards.yml       # Index of all standards
+cat standards/global/code-style.md
+cat standards/global/minimal-changes.md
+```
+
+Standards are living documents. The `/learn` skill promotes proven patterns from `.chaos/learnings.md` into `standards/` over time.
 
 ## Project Structure
 
 ```
-specs/                    # Specifications (from /create-spec)
-└── 2025-01-25-feature/   # Dated spec folder
-    ├── SPEC.md           # Main specification
-    ├── context/
-    │   ├── patterns.md   # Codebase patterns found by scout
-    │   ├── references.md # Files to modify
-    │   └── decisions.md  # Design decisions from conversation
-    └── visuals/          # Mockups, screenshots (optional)
 .claude/
-├── agents/
-│   ├── scout.md          # Codebase explorer for spec creation
-│   ├── spec-reviewer.md
-│   ├── explore.md
-│   ├── plan.md
-│   ├── implement.md
-│   ├── verifier.md
-│   ├── code-reviewer.md
-│   ├── dispute-resolver.md
-│   ├── beads-helper.md
-│   └── tooling-setup.md
 ├── skills/
-│   ├── create-spec/      # Interactive spec creation
-│   ├── orchestrate/      # Main coordination skill
-│   ├── review-spec/
-│   ├── coding-standards/
-│   └── testing-guide/
+│   ├── work/               # Task execution workflow
+│   ├── self-check/         # Pre-push quality gate
+│   ├── learn/              # Learning and pattern promotion
+│   ├── review-feedback/    # PR review handler
+│   ├── coding-standards/   # Standards reference (background)
+│   └── testing-guide/      # Testing reference (background)
 ├── scripts/
-│   └── preflight.sh      # Tooling checks
+│   └── preflight.sh        # Tooling checks
 └── settings.local.json
-.CHAOS/
-├── framework_path        # Framework location
-└── version               # CHAOS configuration
+.chaos/
+├── framework/              # Framework configuration
+│   ├── framework_path      # Framework location
+│   └── version             # CHAOS configuration
+├── learnings.md            # Accumulated observations
+└── learnings-archive/      # Archived promoted observations
+standards/                  # Coding standards (evolves via /learn)
 ```
 
-## Context Management
+## Key Rules
 
-Agents are designed to minimize context usage:
-- **`/orchestrate` skill**: Runs in main conversation, coordinates pipeline
-- **Dispute Resolver**: Receives summaries only, never full code
-- **Verifier**: Quick checks, not deep analysis
-- **Beads-Helper**: Executes commands, doesn't reason about them
-
-### Background Execution Pattern
-
-**ALL subagents run in background** to prevent 80k+ token context bloat:
-
-```
-/orchestrate skill launches agent with run_in_background: true
-         ↓
-Skill WAITS (does nothing else)
-         ↓
-System notification when agent completes
-         ↓
-Skill receives summary (< 500 tokens)
-```
-
-**Critical Rules**:
-- `/orchestrate` NEVER polls agents with `TaskOutput`
-- `/orchestrate` NEVER reads agent output files
-- All agents return **summary-only** output (< 500 tokens)
-- Detailed results go to: Beads issues or git
-
-### Summary-Only Returns
-
-Every agent returns a contracted summary format:
-| Agent | Max Tokens | Key Fields |
-|-------|------------|------------|
-| spec-reviewer | 400 | Status, Completeness, Ready |
-| explore | 500 | Status, Key Files, Patterns, Next |
-| plan | 500 | Status, Files to Modify, Decisions, Next |
-| implement | 500 | Status, Files Changed, Tests, Next |
-| verifier | 500 | Verdict, Criteria Met, Tests, Next |
-| code-reviewer | 500 | Verdict, Tests, Patterns, Next |
-| dispute-resolver | 400 | Decision, Pattern, Action |
-| beads-helper | 300 | Operations, Issue IDs, Errors |
-
-## When Human Intervention Needed
-
-1. Spec questions (via spec-reviewer)
-2. Third failure on same work unit (via dispute-resolver)
-3. Requirements ambiguity discovered mid-implementation
-4. Security or architectural concerns
+1. **Read before you write.** Always explore existing code before modifying it.
+2. **Check learnings first.** `.chaos/learnings.md` has notes from past sessions.
+3. **Follow standards.** Check `standards/` for established patterns.
+4. **Minimal diffs.** Only change what the task requires.
+5. **Tests alongside code.** Write tests as you implement, not after.
+6. **Beads-first.** Update Beads issues as you work: `bd update <id> --note "..."`
+7. **No attribution.** Do NOT add Co-Authored-By, Signed-off-by, or any other co-author attribution to commits.

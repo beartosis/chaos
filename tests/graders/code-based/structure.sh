@@ -1,5 +1,5 @@
 #!/bin/bash
-# Code-based graders for CHAOS agent output validation
+# Code-based graders for CHAOS skill output validation
 # These provide fast, deterministic checks
 
 set -euo pipefail
@@ -88,12 +88,33 @@ check_completeness_score() {
         return 0  # Don't fail if score format not found
     fi
 
-    # Normalize percentage to decimal
-    if (( $(echo "$score > 1" | bc -l) )); then
-        score=$(echo "scale=2; $score / 100" | bc)
+    # Normalize to integer percentage (0-100 scale) for comparison
+    # Handle both "85" and "0.85" formats
+    local score_int
+    if [[ "$score" == 0.* ]]; then
+        # Decimal like 0.85 -> 85
+        score_int="${score#0.}"
+        score_int="${score_int:0:2}"  # Take first 2 digits
+    elif [[ "$score" == *.* ]]; then
+        # Decimal like 85.5 -> 85 (truncate)
+        score_int="${score%%.*}"
+    else
+        # Already integer like 85
+        score_int="$score"
     fi
 
-    if (( $(echo "$score >= $min_score" | bc -l) )); then
+    # Convert min_score the same way
+    local min_int
+    if [[ "$min_score" == 0.* ]]; then
+        min_int="${min_score#0.}"
+        min_int="${min_int:0:2}"
+    elif [[ "$min_score" == *.* ]]; then
+        min_int="${min_score%%.*}"
+    else
+        min_int="$min_score"
+    fi
+
+    if (( score_int >= min_int )); then
         echo "PASS: Score $score >= $min_score"
         return 0
     else

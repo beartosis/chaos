@@ -1,8 +1,27 @@
 #!/bin/bash
-# CHAOS Framework Installer (Orchestrating Rowdy Claude Agents)
+# CHAOS Framework Installer v2.0
 # Run from your project directory: ~/chaos/install.sh
+#
+# Options:
+#   --force    Skip confirmation prompts (for CI/scripts)
 
 set -euo pipefail
+
+# --- Parse Arguments ---
+FORCE_MODE=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --force|-f)
+            FORCE_MODE=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--force]"
+            exit 1
+            ;;
+    esac
+done
 
 # --- Path Detection ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -53,7 +72,7 @@ validate_installation() {
 main() {
     echo ""
     print_header "=================================="
-    print_header "  CHAOS Framework Installer"
+    print_header "  CHAOS Framework Installer v2.0"
     print_header "=================================="
     echo ""
     echo "Framework location: $CHAOS_ROOT"
@@ -70,14 +89,26 @@ main() {
         exit 1
     fi
     print_success "Beads: $BEADS_VERSION"
+
+    # Check gh CLI (advisory)
+    if command -v gh &>/dev/null; then
+        print_success "GitHub CLI: $(gh --version 2>/dev/null | head -1)"
+    else
+        print_warning "GitHub CLI (gh) not found — needed for PR workflow"
+        echo "  Install: https://cli.github.com/"
+    fi
     echo ""
 
     # Confirm installation
-    read -p "Install CHAOS orchestration into this project? [y/N] " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Installation cancelled."
-        exit 0
+    if [[ "$FORCE_MODE" = true ]]; then
+        echo "Installing CHAOS (--force mode)..."
+    else
+        read -p "Install CHAOS orchestration into this project? [y/N] " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Installation cancelled."
+            exit 1
+        fi
     fi
 
     echo ""
@@ -86,25 +117,10 @@ main() {
 
     # Create directory structure
     echo "Creating directory structure..."
-    mkdir -p "$PROJECT_ROOT/.claude"/{agents,skills,scripts}
-    mkdir -p "$PROJECT_ROOT/specs"
-    mkdir -p "$PROJECT_ROOT/.CHAOS"
+    mkdir -p "$PROJECT_ROOT/.claude"/{skills,scripts}
+    mkdir -p "$PROJECT_ROOT/.chaos/learnings-archive"
+    mkdir -p "$PROJECT_ROOT/.chaos/framework"
     print_success "Directories created"
-
-    # Process and copy agent templates
-    echo "Installing agents..."
-    local agent_count=0
-    for template in "$CHAOS_ROOT/templates/.claude/agents"/*.tmpl; do
-        [[ -f "$template" ]] || continue
-        filename=$(basename "$template" .tmpl)
-        process_template "$template" "$PROJECT_ROOT/.claude/agents/$filename"
-        agent_count=$((agent_count + 1))
-    done
-    # Copy agents index
-    if [[ -f "$CHAOS_ROOT/templates/.claude/agents/index.yml" ]]; then
-        cp "$CHAOS_ROOT/templates/.claude/agents/index.yml" "$PROJECT_ROOT/.claude/agents/"
-    fi
-    print_success "$agent_count agents installed"
 
     # Process and copy skill templates
     echo "Installing skills..."
@@ -136,11 +152,11 @@ main() {
 
     # Install skill registry
     echo "Installing skill registry..."
-    if [[ -f "$CHAOS_ROOT/templates/.CHAOS/skill-registry.json" ]]; then
+    if [[ -f "$CHAOS_ROOT/templates/.chaos/framework/skill-registry.json" ]]; then
         INSTALL_DATE="$(date -Iseconds)"
         sed -e "s|\${CHAOS_ROOT}|$CHAOS_ROOT|g" \
             -e "s|\${INSTALL_DATE}|$INSTALL_DATE|g" \
-            "$CHAOS_ROOT/templates/.CHAOS/skill-registry.json" > "$PROJECT_ROOT/.CHAOS/skill-registry.json"
+            "$CHAOS_ROOT/templates/.chaos/framework/skill-registry.json" > "$PROJECT_ROOT/.chaos/framework/skill-registry.json"
         print_success "Skill registry installed"
     fi
 
@@ -171,6 +187,16 @@ main() {
         cp "$PROJECT_ROOT/CLAUDE.md" "$PROJECT_ROOT/CLAUDE.md.backup"
     fi
     process_template "$CHAOS_ROOT/templates/CLAUDE.md.tmpl" "$PROJECT_ROOT/CLAUDE.md"
+
+    # Strip ORDER or STANDALONE blocks based on whether ORDER is installed
+    if [[ -d "$PROJECT_ROOT/.chaos/framework/order" ]]; then
+        # ORDER is present — remove STANDALONE blocks
+        sed -i '/<!-- STANDALONE-START -->/,/<!-- STANDALONE-END -->/d' "$PROJECT_ROOT/CLAUDE.md"
+    else
+        # Standalone mode — remove ORDER blocks
+        sed -i '/<!-- ORDER-START -->/,/<!-- ORDER-END -->/d' "$PROJECT_ROOT/CLAUDE.md"
+    fi
+
     print_success "CLAUDE.md installed"
 
     # Install skills catalog
@@ -180,10 +206,14 @@ main() {
         print_success "Skills catalog installed"
     fi
 
-    # Copy example spec
-    echo "Installing example spec..."
-    cp "$CHAOS_ROOT/templates/specs/_example.md" "$PROJECT_ROOT/specs/"
-    print_success "Example spec installed"
+    # Install learnings starter
+    echo "Installing learnings system..."
+    if [[ ! -f "$PROJECT_ROOT/.chaos/learnings.md" ]]; then
+        cp "$CHAOS_ROOT/templates/.chaos/learnings.md" "$PROJECT_ROOT/.chaos/"
+        print_success "Learnings file created"
+    else
+        print_warning "learnings.md already exists — preserving"
+    fi
 
     # Install standards
     echo "Installing standards..."
@@ -204,9 +234,9 @@ main() {
 
     # Save metadata
     echo "Saving configuration..."
-    echo "$CHAOS_ROOT" > "$PROJECT_ROOT/.CHAOS/framework_path"
-    cat > "$PROJECT_ROOT/.CHAOS/version" <<EOF
-CHAOS_VERSION=0.0.1
+    echo "$CHAOS_ROOT" > "$PROJECT_ROOT/.chaos/framework/framework_path"
+    cat > "$PROJECT_ROOT/.chaos/framework/version" <<EOF
+CHAOS_VERSION=2.0.0
 BEADS_VERSION="$BEADS_VERSION"
 CHAOS_ROOT="$CHAOS_ROOT"
 PROJECT_ROOT="$PROJECT_ROOT"
@@ -228,13 +258,14 @@ EOF
     echo ""
     print_header "Next Steps"
     echo ""
-    echo "  1. Create a spec interactively:"
-    echo "     claude /create-spec"
+    echo "  1. ORDER assigns a task:"
+    echo "     ORDER: /plan-work <spec>"
     echo ""
-    echo "  2. Answer questions until the spec is complete"
+    echo "  2. Start working on a task:"
+    echo "     claude /work <task-id>"
     echo ""
-    echo "  3. Run orchestration:"
-    echo "     claude /orchestrate 2025-01-25-my-feature"
+    echo "  3. After review and merge:"
+    echo "     claude /learn"
     echo ""
     echo "Documentation: $CHAOS_ROOT/docs/"
     echo ""
