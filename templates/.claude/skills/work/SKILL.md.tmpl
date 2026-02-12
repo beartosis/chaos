@@ -128,22 +128,46 @@ gh pr create --draft --title "<task title>" --body "## Task
 
 Update your issue tracker to record the draft PR (e.g., `bd update $ARGUMENTS --note "Draft PR created. Awaiting review."`).
 
-## What Happens Next
-
 <!-- ORDER-START -->
 **When running under ORDER (autonomous mode):**
-1. Run `/pr-monitor` to autonomously monitor the PR
-2. `/pr-monitor` polls GHA every 2 minutes and addresses feedback
-3. When all merge gates pass, `/pr-monitor` merges the PR
-4. Run `/learn` to capture observations
+The ORDER loop handles PR lifecycle (review, feedback, merge) and `/learn` after merge. Your work is done at Step 6.
 <!-- ORDER-END -->
 
 <!-- STANDALONE-START -->
-**When running standalone (interactive mode):**
+## Step 7: PR Lifecycle
+
 1. Push your draft PR for review (human or CI)
 2. Address any review comments with `/review-feedback`
 3. Once approved, merge the PR
-4. Run `/learn` to capture observations for future sessions
+
+## Step 8: Learn (MANDATORY — do not skip)
+
+After your PR is merged, capture what you learned. **This step is not optional.** Every task produces observations that help future sessions.
+
+1. **Reflect** on what happened during this task:
+   - What patterns did you discover or rely on?
+   - What was surprising about the codebase?
+   - What mistakes did you make that could be avoided?
+   - Were there gaps in the standards that would have helped?
+
+2. **Append observations** to `.chaos/learnings.md`:
+   ```markdown
+   ## YYYY-MM-DD — $ARGUMENTS
+
+   - **Observation**: [What you noticed]
+   - **Context**: [Why it matters]
+   - **Recommendation**: [What future sessions should do]
+   ```
+
+3. **Check for promotable patterns** — scan for patterns appearing 3+ times:
+   ```bash
+   bash .claude/scripts/analyze-learnings.sh
+   ```
+   If any patterns qualify, promote them to `standards/` and log in `standards/CHANGELOG.md`.
+
+4. **Sync beads**: `bd sync`
+
+> **You are not done until this step is complete.** Do not end the session or report task completion without capturing learnings.
 <!-- STANDALONE-END -->
 
 ## Key Principles
